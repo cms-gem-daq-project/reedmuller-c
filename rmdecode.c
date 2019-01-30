@@ -94,10 +94,14 @@ int main(int argc, char *argv[])
 #endif
 
     /* decode it */
-    reedmuller_decode(rm, received, message);
-    for (j=0; j < rm->k; ++j)
-      printf("%d", message[j]);
-    printf("\n");
+    int result = reedmuller_decode(rm, received, message);
+    if (result) {
+      for (j=0; j < rm->k; ++j)
+        printf("%d", message[j]);
+      printf("\n");
+    } else {
+      printf("Unable to decode message 0x%08x, probably more than %d errors", *received, reedmuller_strength(rm) );
+    }
   }
 
   cleanup();
@@ -112,4 +116,3 @@ int main(int argc, char *argv[])
  * Still need to fix problems with decoding; not doing it properly.
  *
  */
-

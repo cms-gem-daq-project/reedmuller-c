@@ -38,6 +38,7 @@ struct _reedmuller {
      not only inefficient but bad programming style */
   int *vector[NUMVECTORS];
   int *subset[NUMSUBSETS];
+
 };
 
 typedef struct _reedmuller *reedmuller;
@@ -48,6 +49,8 @@ void reedmuller_free(reedmuller);
 int reedmuller_encode(reedmuller, int*, int*);
 
 int reedmuller_decode(reedmuller, int*, int*);
+
+int reedmuller_strength(reedmuller);
 
 #endif
 

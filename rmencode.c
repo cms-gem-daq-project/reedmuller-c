@@ -118,4 +118,3 @@ int main(int argc, char *argv[])
  * Fixed bugs in reedmuller.c and added command-line encoding app.
  *
  */
-

@@ -8,7 +8,9 @@
 
 CC=gcc
 #CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
-CFLAGS=-O3 -ansi -Wall
+CFLAGS=-O0 -g3 -fno-inline -std=c++14 -ansi -Wall
+
+LDFLAGS = -fPIC -shared -lm
 
 TESTS=\
 #	testksubset
@@ -17,6 +19,9 @@ PROGS=\
 	rmencode\
 	rmdecode
 
+LIBS=\
+	libreedmuller.so
+
 OBJS=\
 	matrix.o\
 	ksubset.o\
@@ -24,10 +29,10 @@ OBJS=\
 	vector.o\
 	reedmuller.o
 
-all:		$(PROGS) $(OBJS) $(TESTS)
+all:		$(PROGS) $(LIBS) $(OBJS) $(TESTS)
 
 clean:
-		rm -rf *~ $(PROGS) $(OBJS) $(TESTS)
+		rm -rf *~ $(PROGS) $(OBJS) $(TESTS) $(LIBS)
 
 matrix.o:	matrix.h matrix.c common.h
 		$(CC) $(CFLAGS) -o matrix.o -c matrix.c
@@ -44,17 +49,23 @@ vector.o:	vector.h vector.c
 reedmuller.o:	reedmuller.h reedmuller.c common.h matrix.h ksubset.h vector.h
 		$(CC) $(CFLAGS) -o reedmuller.o -c reedmuller.c
 
-testksubset:	testksubset.c common.h $(OBJS)
-		$(CC) $(CFLAGS) -o testksubset testksubset.c $(OBJS)
+$(LIBS):        $(OBJS)
+		$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^ -L.
 
-rmencode:	rmencode.c $(OBJS)
-		$(CC) $(CFLAGS) -o rmencode rmencode.c $(OBJS)
+testksubset:	testksubset.c common.h $(LIBS)
+		$(CC) $(CFLAGS) -o testksubset testksubset.c -L./ -lreedmuller -lm
 
-rmdecode:	rmdecode.c $(OBJS)
-		$(CC) $(CFLAGS) -o rmdecode rmdecode.c $(OBJS)
+rmencode:	rmencode.c $(LIBS)
+		$(CC) $(CFLAGS) -o rmencode rmencode.c -L./ -lreedmuller -lm
+
+rmdecode:	rmdecode.c $(LIBS)
+		$(CC) $(CFLAGS) -o rmdecode rmdecode.c -L./ -lreedmuller -lm
 
 #
 # $Log: Makefile,v $
+# Revision 1.6  2019/01/30 14:21:43  jsturdy
+# Make libreedmuller.so as a shared library
+#
 # Revision 1.5  2002/12/09 04:25:43  vorpal
 # Fixed some glaring errors in reedmuller.c
 # Still need to fix problems with decoding; not doing it properly.
