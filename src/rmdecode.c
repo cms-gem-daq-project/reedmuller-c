@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
   printf("\n");
 #endif
 
+  uint32_t maxcode = reedmuller_maxdecode(rm);
+
   for (i=3; i < argc; ++i) {
     /* /\* make sure that the message is of the appropriate length *\/ */
     /* if (strlen(argv[i]) != rm->n) { */
@@ -101,27 +103,27 @@ int main(int argc, char *argv[])
     
     errno = 0;
 
-    unsigned long conv = strtoul(argv[i], &p, 0);
-    /* Check for errors: e.g., the string does not represent an integer */
-    /* or the integer is larger than int */
-    /* determine the max size of the int based on the RM parameters */
-    /* what's the "maxcode for decoding? 2X as many bits as the encoding max?  */
-    uint32_t maxcode = reedmuller_maxdecode(rm);
+    unsigned long conv = strtoul(argv[i], &p, 2);
+    if (errno != 0 || *p != '\0') {
+      errno = 0;
+      fprintf(stderr, "unable to convert argument to int type from binary assumption\n");
+      conv = strtoul(argv[i], &p, 0);
+      if (errno != 0 || *p != '\0') {
+        fprintf(stderr, "unable to convert argument to int type\n");
+        continue;
+      }
+    }
+
     if (conv > maxcode) {
       fprintf(stderr, "converted value to decode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
-      continue;
-    } else if (errno != 0 || *p != '\0') {
-    /* if (errno != 0 || *p != '\0') { */
-      fprintf(stderr, "unable to convert argument to int type\n");
       continue;
     } else {
       num = conv;    
       printf("%u 0x%x 0b", num, num);
       for (j=0; j < rm->n; ++j) {
         printf("%d", ((num>>j) &0x1));
-        received[j] = (num>>j) &0x1;
+        received[(rm->n-j-1)] = (num>>j) &0x1;
       }
-      printf("\n");
     }
 #ifdef OUTPUTINPUT
     printf("received 0b");
@@ -157,11 +159,13 @@ int main(int argc, char *argv[])
         num2 = conv2;
       }
 
+#ifdef DEBUG
       printf("codeword (address)  = %x\n", received );
       printf("message  (address)  = %x\n", message  );
       printf("convert  (address)  = %x\n", &num     );
       printf("*codeword (encoded) = %x\n", *received);
       printf("*message  (encode)  = %x\n", *message );
+#endif
       printf("decode    = %x\n", num      );
       printf("decoded   = %x\n", num2     );
     } else {

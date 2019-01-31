@@ -12,7 +12,7 @@ endif
 
 # CC=gcc
 # #CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
-# CFLAGS=-O0 -g3 -fno-inline -std=c17 -Wall -DDEBUG
+# CFLAGS=-O0 -g3 -fno-inline -std=c17 -Wall
 
 CXX=arm-linux-gnueabihf-g++
 CC=arm-linux-gnueabihf-gcc

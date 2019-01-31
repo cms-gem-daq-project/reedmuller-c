@@ -85,6 +85,8 @@ int main(int argc, char *argv[])
   printf("\n");
 #endif
 
+  uint32_t maxcode = reedmuller_maxencode(rm);
+
   for (i=3; i < argc; ++i) {
     /* /\* make sure that the message is of the appropriate length *\/ */
     /* if (strlen(argv[i]) != rm->k) { */
@@ -100,39 +102,33 @@ int main(int argc, char *argv[])
     uint32_t num;
 
     errno = 0;
-    unsigned long conv = strtoul(argv[i], &p, 0);
-    /* Check for errors: e.g., the string does not represent an integer */
-    /* or the integer is larger than int */
-    /* determine the max size of the int based on the RM parameters */
-    uint32_t maxcode = reedmuller_maxencode(rm);
+    unsigned long conv = strtoul(argv[i], &p, 2);
+    if (errno != 0 || *p != '\0') {
+      fprintf(stderr, "unable to convert argument to int type from binary assumption\n");
+      errno = 0;
+      conv = strtoul(argv[i], &p, 0);
+      if (errno != 0 || *p != '\0') {
+        fprintf(stderr, "unable to convert argument to int type\n");
+        continue;
+      }
+    }
+
     if (conv > maxcode) {
       fprintf(stderr, "converted value to encode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
       continue;
-      /* cleanup(); */
-      /* exit(EXIT_FAILURE); */
-    } else if (errno != 0 || *p != '\0') {
-      /* Put here the handling of the error, like exiting the program with */
-      /* an error message */
-      fprintf(stderr, "unable to convert argument to int type\n");
-      continue;
-      /* cleanup(); */
-      /* exit(EXIT_FAILURE); */
     } else {
-      /* No error */
       num = conv;
       printf("%u 0x%x 0b", num, num);
       for (j=0; j < rm->k; ++j) {
         printf("%d", ((num>>j) &0x1));
-        message[j] = (num>>j) &0x1;
+        message[(rm->k-j-1)] = (num>>j) &0x1;
       }
-      /* printf("\n"); */
     }
 
 #ifdef OUTPUTINPUT
     printf("message 0b");
     for (j=0; j < rm->k; ++j)
-      /* printf("%d", message[j]); */
-      printf("%d", ((num>>j) &0x1));
+      printf("%d", message[j]);
     /* printf(" -> 0b"); */
 #endif
 
@@ -161,11 +157,13 @@ int main(int argc, char *argv[])
       num2 = conv2;
     }
 
+#ifdef DEBUG
     printf("codeword (address)  = %x\n", codeword );
     printf("message  (address)  = %x\n", message  );
     printf("convert  (address)  = %x\n", &num     );
     printf("*codeword (encoded) = %x\n", *codeword);
     printf("*message  (encode)  = %x\n", *message );
+#endif
     printf("encode    = %x\n", num      );
     printf("encoded   = %x\n", num2     );
   }
