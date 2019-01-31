@@ -12,6 +12,7 @@
 #ifndef REEDMULLER_H
 #define REEDMULLER_H
 
+#include <stdint.h>
 #include "ksubset.h"
 
 /* these must be at least 4 and 2 for init and decode to work properly! */
@@ -23,14 +24,14 @@
 #endif
 
 struct _reedmuller {
-  int r;
-  int m;
-  int q;
-  int n;
-  int k;
-  int **G;
-  int **rows;
-  set s;
+  int r;      /* */
+  int m;      /* */
+  int q;      /* */
+  int n;      /* n is the maximum decodeable bits */
+  int k;      /* k is the maximum encodeable bits */
+  int **G;    /* */
+  int **rows; /* */
+  set s;      /* */
 
   /* this isn't all that elegant, but allocating work vectors / subsets during
      the initialization process prevents us from having to create them
@@ -51,6 +52,10 @@ int reedmuller_encode(reedmuller, int*, int*);
 int reedmuller_decode(reedmuller, int*, int*);
 
 int reedmuller_strength(reedmuller);
+
+uint32_t reedmuller_maxencode(reedmuller);
+
+uint32_t reedmuller_maxdecode(reedmuller);
 
 #endif
 

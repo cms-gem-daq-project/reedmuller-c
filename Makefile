@@ -10,10 +10,14 @@ ifndef PETA_STAGE
 $(error "Error: PETA_STAGE environment variable not set, unable to compile for Zynq.")
 endif
 
-CXX=arm-linux-gnueabihf-g++
-CC=arm-linux-gnueabihf-g++
+# CC=gcc
+# #CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
+# CFLAGS=-O0 -g3 -fno-inline -std=c17 -Wall -DDEBUG
 
-CFLAGS= -O0 -g3 -fno-inline -std=c++14 -ansi -fPIC -Wall \
+CXX=arm-linux-gnueabihf-g++
+CC=arm-linux-gnueabihf-gcc
+
+CFLAGS= -O0 -g3 -fno-inline -std=c++14 -fPIC -Wall \
 	-march=armv7-a -mfpu=neon -mfloat-abi=hard \
 	-mthumb-interwork -mtune=cortex-a9 \
 	-DEMBED -Dlinux -D__linux__ -Dunix \

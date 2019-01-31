@@ -14,9 +14,11 @@
 #include <string.h>
 #include "reedmuller.h"
 #include "common.h"
+#include <errno.h>
+#include <limits.h>
 
 static reedmuller rm = 0;
-static int *message = 0;
+static int *message  = 0;
 static int *codeword = 0;
 
 
@@ -24,10 +26,16 @@ static int read_vector_from_string(char *str, int elems, int *vector)
 {
   int i;
 
+#ifdef OUTPUTINPUT
+  printf("vector: ");
+#endif
   for (i=0; i < elems; ++i) {
     if (!(*str))
       return FALSE;
     vector[i] = str[i] - '0';
+#ifdef OUTPUTINPUT
+    printf("vector[%d] %d\n",i, str[i]-'0');
+#endif
   }
 
   return TRUE;
@@ -57,7 +65,7 @@ int main(int argc, char *argv[])
   r = atoi(argv[1]);
   m = atoi(argv[2]);
   if ((!(rm = reedmuller_init(r, m)))
-      || (!(message = (int*) calloc(rm->k, sizeof(int))))
+      || (!(message  = (int*) calloc(rm->k, sizeof(int))))
       || (!(codeword = (int*) calloc(rm->n, sizeof(int))))) {
     fprintf(stderr, "out of memory\n");
     cleanup();
@@ -78,26 +86,88 @@ int main(int argc, char *argv[])
 #endif
 
   for (i=3; i < argc; ++i) {
-    /* make sure that the message is of the appropriate length */
-    if (strlen(argv[i]) != rm->k) {
-      fprintf(stderr, "message %s has invalid length %d (needs %d)\n",
-	      argv[i], strlen(argv[i]), rm->k);
+    /* /\* make sure that the message is of the appropriate length *\/ */
+    /* if (strlen(argv[i]) != rm->k) { */
+    /*   fprintf(stderr, "message %s has invalid length %d (needs %d)\n", */
+    /*           argv[i], strlen(argv[i]), rm->k); */
+    /*   continue; */
+    /* } */
+
+    /* /\* read in the message *\/ */
+    /* read_vector_from_string(argv[i], rm->k, message); */
+
+    char *p;
+    uint32_t num;
+
+    errno = 0;
+    unsigned long conv = strtoul(argv[i], &p, 0);
+    /* Check for errors: e.g., the string does not represent an integer */
+    /* or the integer is larger than int */
+    /* determine the max size of the int based on the RM parameters */
+    uint32_t maxcode = reedmuller_maxencode(rm);
+    if (conv > maxcode) {
+      fprintf(stderr, "converted value to encode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
       continue;
+      /* cleanup(); */
+      /* exit(EXIT_FAILURE); */
+    } else if (errno != 0 || *p != '\0') {
+      /* Put here the handling of the error, like exiting the program with */
+      /* an error message */
+      fprintf(stderr, "unable to convert argument to int type\n");
+      continue;
+      /* cleanup(); */
+      /* exit(EXIT_FAILURE); */
+    } else {
+      /* No error */
+      num = conv;
+      printf("%u 0x%x 0b", num, num);
+      for (j=0; j < rm->k; ++j) {
+        printf("%d", ((num>>j) &0x1));
+        message[j] = (num>>j) &0x1;
+      }
+      /* printf("\n"); */
     }
 
-    /* read in the message */
-    read_vector_from_string(argv[i], rm->k, message);
 #ifdef OUTPUTINPUT
+    printf("message 0b");
     for (j=0; j < rm->k; ++j)
-      printf("%d", message[j]);
-    printf(" -> ");
+      /* printf("%d", message[j]); */
+      printf("%d", ((num>>j) &0x1));
+    /* printf(" -> 0b"); */
 #endif
+
+    printf(" -> 0b");
 
     /* encode it */
     reedmuller_encode(rm, message, codeword);
-    for (j=0; j < rm->n; ++j)
+    char encoded[1024];
+    char* ep = encoded;
+    for (j=0; j < rm->n; ++j) {
       printf("%d", codeword[j]);
+      ep += sprintf(ep,"%d", codeword[j]);
+    }
     printf("\n");
+
+    char *p2;
+    uint32_t num2;
+
+    errno = 0;
+
+    unsigned long conv2 = strtoul(encoded, &p2, 2);
+    if (errno != 0 || *p2 != '\0') {
+      fprintf(stderr, "unable to convert argument to int type\n");
+      continue;
+    } else {
+      num2 = conv2;
+    }
+
+    printf("codeword (address)  = %x\n", codeword );
+    printf("message  (address)  = %x\n", message  );
+    printf("convert  (address)  = %x\n", &num     );
+    printf("*codeword (encoded) = %x\n", *codeword);
+    printf("*message  (encode)  = %x\n", *message );
+    printf("encode    = %x\n", num      );
+    printf("encoded   = %x\n", num2     );
   }
 
   cleanup();

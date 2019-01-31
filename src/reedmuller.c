@@ -288,6 +288,22 @@ int reedmuller_strength(reedmuller rm)
   return pow(2, (rm->m - rm->r - 1)) - 1;
 }
 
+uint32_t reedmuller_maxencode(reedmuller rm)
+{
+  uint32_t maxencode = 0;
+  for (uint32_t i = 0; i < rm->k; ++i)
+    maxencode |= 0x1<<i;
+  return maxencode;
+}
+
+uint32_t reedmuller_maxdecode(reedmuller rm)
+{
+  uint32_t maxdecode = 0;
+  for (uint32_t i = 0; i < rm->n; ++i)
+    maxdecode |= 0x1<<i;
+  return maxdecode;
+}
+
 /*
  * $Log: reedmuller.c,v $
  * Revision 1.7  2002/12/09 15:07:04  vorpal
