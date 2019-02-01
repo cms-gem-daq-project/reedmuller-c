@@ -6,60 +6,98 @@
 # $Author: vorpal $
 # $Date: 2002/12/09 04:25:43 $
 
-CC=gcc
-#CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
-CFLAGS=-O0 -g3 -fno-inline -std=c++14 -ansi -Wall
+ifndef PETA_STAGE
+$(error "Error: PETA_STAGE environment variable not set, unable to compile for Zynq.")
+endif
 
-LDFLAGS = -fPIC -shared -lm
+CXX=arm-linux-gnueabihf-g++
+CC=arm-linux-gnueabihf-g++
+
+CFLAGS= -O0 -g3 -fno-inline -std=c++14 -ansi -fPIC -Wall \
+	-march=armv7-a -mfpu=neon -mfloat-abi=hard \
+	-mthumb-interwork -mtune=cortex-a9 \
+	-DEMBED -Dlinux -D__linux__ -Dunix \
+	--sysroot=$(PETA_STAGE) \
+	-I$(PETA_STAGE)/usr/include \
+	-I$(PETA_STAGE)/include
+
+LDLIBS= -L$(PETA_STAGE)/lib \
+	-L$(PETA_STAGE)/usr/lib \
+	-L$(PETA_STAGE)/ncurses
+
+LDFLAGS = -fPIC -shared $(LDLIBS) -lm
 
 TESTS=\
-#	testksubset
+# $(BIN_DIR)/testksubset
 
-PROGS=\
-	rmencode\
-	rmdecode
+SRC_DIR=src
+OBJ_DIR=$(SRC_DIR)/linux
+LIB_DIR=lib
+INC_DIR=include
+BIN_DIR=bin
 
-LIBS=\
-	libreedmuller.so
+PROGS= $(BIN_DIR)/rmencode \
+	$(BIN_DIR)/rmdecode
 
-OBJS=\
-	matrix.o\
-	ksubset.o\
-	combination.o\
-	vector.o\
-	reedmuller.o
+LIBS= $(LIB_DIR)/libreedmuller.so
 
-all:		$(PROGS) $(LIBS) $(OBJS) $(TESTS)
+# outputs
+INCDIRS= $(INC_DIR:%=-I%)
+LIBDIRS = $(LIB_DIR:%=-L%)
+SOURCES = $(filter-out $(SRC_DIR)/rm%.c,$(wildcard $(SRC_DIR)/*.c))
+XSOURCES= $(filter     $(SRC_DIR)/rm%.c,$(wildcard $(SRC_DIR)/*.c))
+AUTODEPS= $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.d,$(SOURCES))
+OBJECTS = $(patsubst %.d,%.o,$(AUTODEPS))
+LIBRARY = $(LIB_DIR)/libreedmuller.so
+
+LDFLAGS+= $(LIBDIRS)
+$(info INC_DIR $(INC_DIR))
+$(info SRC_DIR $(SRC_DIR))
+$(info OBJ_DIR $(OBJ_DIR))
+$(info LIB_DIR $(LIB_DIR))
+$(info BIN_DIR $(BIN_DIR))
+
+$(info INCDIRS $(INCDIRS))
+$(info LIBDIRS  $(LIBDIRS))
+$(info SOURCES  $(SOURCES))
+$(info XSOURCES $(XSOURCES))
+$(info AUTODEPS $(AUTODEPS))
+$(info OBJECTS  $(OBJECTS))
+$(info LIBRARY  $(LIBRARY))
+
+# destination path macro we'll use below
+df = $(OBJ_DIR)/$(*F)
+
+.PHONY: all clean
+all: $(PROGS) $(LIBS) $(OBJECTS) $(TESTS)
+
+default: $(PROGS) $(LIBS) $(OBJECTS)
+
+tests: $(TESTS)
 
 clean:
-		rm -rf *~ $(PROGS) $(OBJS) $(TESTS) $(LIBS)
+	rm -rf *~ $(PROGS) $(OBJECTS) $(TESTS) $(LIBS) $(AUTODEPS)
 
-matrix.o:	matrix.h matrix.c common.h
-		$(CC) $(CFLAGS) -o matrix.o -c matrix.c
+# Main target
+$(LIBRARY): $(OBJECTS)
+	mkdir -p $(LIB_DIR)
+	$(CC) $(LDFLAGS) -Wl,-soname,libreedmuller.so -o $@ $^
 
-combination.o:	combination.h combination.c matrix.h common.h
-		$(CC) $(CFLAGS) -o combination.o -c combination.c
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
+	$(CC) $(CFLAGS) -c $(INCDIRS) -MT $@ -MMD -MP -MF $(OBJ_DIR)/$*.Td -o $@ $<
+	mv $(OBJ_DIR)/$*.Td $(OBJ_DIR)/$*.d
+	touch $@
 
-ksubset.o:	ksubset.h ksubset.c combination.h common.h
-		$(CC) $(CFLAGS) -o ksubset.o -c ksubset.c
+$(OBJ_DIR)/%.d:
+.PRECIOUS: $(OBJ_DIR)/%.d
 
-vector.o:	vector.h vector.c
-		$(CC) $(CFLAGS) -o vector.o -c vector.c
+$(BIN_DIR)/%: $(SRC_DIR)/%.c $(LIBS)
+	mkdir -p $(BIN_DIR)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< -lreedmuller $(INCDIRS)
 
-reedmuller.o:	reedmuller.h reedmuller.c common.h matrix.h ksubset.h vector.h
-		$(CC) $(CFLAGS) -o reedmuller.o -c reedmuller.c
-
-$(LIBS):        $(OBJS)
-		$(CC) $(LDFLAGS) -Wl,-soname,$@ -o $@ $^ -L.
-
-testksubset:	testksubset.c common.h $(LIBS)
-		$(CC) $(CFLAGS) -o testksubset testksubset.c -L./ -lreedmuller -lm
-
-rmencode:	rmencode.c $(LIBS)
-		$(CC) $(CFLAGS) -o rmencode rmencode.c -L./ -lreedmuller -lm
-
-rmdecode:	rmdecode.c $(LIBS)
-		$(CC) $(CFLAGS) -o rmdecode rmdecode.c -L./ -lreedmuller -lm
+# $(BIN_DIR)/testksubset: $(SRC_DIR)/testksubset.c $(LIBS)
+# 	mkdir -p $(BIN_DIR)
+# 	$(CC) $(CFLAGS) $(LDFLAGS)  -o $@ $< -L$(LIB_DIR) -lreedmuller
 
 #
 # $Log: Makefile,v $
@@ -83,3 +121,8 @@ rmdecode:	rmdecode.c $(LIBS)
 # Initial checkin.
 #
 #
+
+# include by auto dependencies
+-include $(AUTODEPS)
+
+include ./mfRPM.mk
