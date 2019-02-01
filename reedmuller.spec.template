@@ -1,0 +1,190 @@
+%define _package reedmuller
+%define _packagename %{_package}
+%define _packagedir __packagedir__
+%define _version __version__
+%define _release __release__
+# %define _gitrev __gitrev__
+%define _builddate __builddate__
+%define _prefix  __prefix__
+%define _tmppath /tmp
+%define _platform __platform__
+%define _author __author__
+%define _summary __summary__
+%define _url __url__
+%define _buildarch arm
+
+%define _unpackaged_files_terminate_build 0
+
+#
+# Binary RPM specified attributed (lib and bin)
+#
+Summary: %{_summary}
+Name: %{_packagename}
+Version: %{_version}
+Release: %{_release}
+Packager: %{_author}
+# BuildArch: %{_buildarch}
+License: Apache 2.0
+Group: Libraries/Math
+URL: %{_url}
+BuildRoot: %{_tmppath}/%{_packagename}-%{_version}-%{_release}-buildroot
+Prefix: %{_prefix}
+
+# requires: protobuf-lite-devel
+
+%if 0%{?_requires}
+Requires: __requires__
+%endif
+
+%description
+__description__
+
+#
+# Devel RPM specified attributes (extension to binary rpm with include files)
+#
+
+# Do not check any files in lib/arm for requires
+%global __requires_exclude_from ^%{_prefix}/lib/arm/.*$
+# Do not check .so files in an arm-specific library directory for provides
+%global __provides_exclude_from ^%{_prefix}/lib/arm/*\\.so$
+
+%package -n %{_packagename}-devel
+Summary:  Development package for %{_summary}
+Group:    Libraries/Math
+# Requires: %{_packagename}
+
+%description -n %{_packagename}-devel
+__description__
+
+#
+# Debuginfo RPM specified attributes (extension to binary rpm with include files)
+#
+%package -n %{_packagename}-debuginfo
+Summary:  Debuginfo package for %{_summary}
+Group:    Libraries/Math
+Requires: %{_packagename}
+
+%description -n %{_packagename}-debuginfo
+__description__
+
+#%pre
+
+#%prep
+
+#%setup 
+
+#%build
+
+#
+# Prepare the list of files that are the input to the binary and devel RPMs
+#
+%install
+rm -rf $RPM_BUILD_ROOT
+mkdir -p $RPM_BUILD_ROOT%{_prefix}/{bin,lib/arm,include}
+mkdir -p $RPM_BUILD_ROOT/usr/lib/debug%{_prefix}/lib
+mkdir -p $RPM_BUILD_ROOT/usr/src/debug/%{_packagename}-%{_version}
+
+if [ -d %{_packagedir}/lib ]; then
+   cd %{_packagedir}/lib; \
+   find . -name "*.so" -exec install -D -m 755 {} $RPM_BUILD_ROOT/%{_prefix}/lib/{} \;
+   find . -name "*.so" -exec install -D -m 755 {} $RPM_BUILD_ROOT/%{_prefix}/lib/arm/{} \;
+   # cd $RPM_BUILD_ROOT%{_prefix}/lib; \
+   # ln -s lib%{_packagename}.so lib%{_packagename}_%{_platform}_%{_buildarch}.so;
+   # cd $RPM_BUILD_ROOT%{_prefix}/lib/arm; \
+   # ln -s lib%{_packagename}.so lib%{_packagename}_%{_platform}_%{_buildarch}.so;
+fi
+
+if [ -d %{_packagedir}/include ]; then
+   cd %{_packagedir}/include; \
+   find . -name "*.h" -exec install -D -m 644 {} $RPM_BUILD_ROOT/%{_prefix}/include/{} \;
+fi
+
+if [ -d %{_packagedir}/src ]; then
+   cd %{_packagedir}/src; \
+   find . -name "*.c" -exec install -D -m 644 {} $RPM_BUILD_ROOT/usr/src/debug/%{_prefix}/src/{} \;
+fi
+
+if [ -d %{_packagedir}/bin ]; then
+   cd %{_packagedir}/bin; \
+   find . -name "*" -exec install -D -m 755 {} $RPM_BUILD_ROOT/%{_prefix}/bin/{} \;
+fi
+
+if [ -e %{_packagedir}/ChangeLog ]; then
+   install -m 644 %{_packagedir}/ChangeLog %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
+fi
+
+if [ -e %{_packagedir}/README ]; then
+   install -m 644 %{_packagedir}/README %{_packagedir}/rpm/RPMBUILD/BUILD/README
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/README
+fi
+
+if [ -e %{_packagedir}/MAINTAINER ]; then
+   install -m 644 %{_packagedir}/MAINTAINER %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
+fi
+
+%clean
+#rm -rf $RPM_BUILD_ROOT
+
+#
+# Files that go in the binary RPM
+#
+%files
+%defattr(-,root,root,755)
+# %{_prefix}/lib/lib%{_packagename}_%{_platform}_%{_buildarch}.so
+%{_prefix}/lib/lib%{_packagename}.so
+# %{_prefix}/bin/rpctest
+
+%dir
+%attr(0755,root,root) %{_prefix}/bin
+# %attr(0755,root,root) %{_prefix}/lib
+
+# 
+# Files required by Quattor
+#
+%doc MAINTAINER ChangeLog README
+
+%dir
+%{_prefix}/lib
+
+#
+# Files that go in the devel RPM
+#
+%files -n %{_packagename}-devel
+%defattr(-,root,root,644)
+%{_prefix}/include/*.h
+# %{_prefix}/lib/arm/lib%{_packagename}_%{_platform}_%{_buildarch}.so
+%{_prefix}/lib/arm/lib%{_packagename}.so
+
+%dir
+%{_prefix}/include
+
+#%changelog
+
+# 
+# Files required by Quattor
+#
+%doc MAINTAINER ChangeLog README
+
+#
+# Files that go in the debuginfo RPM
+#
+%files -n %{_packagename}-debuginfo
+%defattr(-,root,root,755)
+# %defattr(0644,root,root,0755)
+# %{_prefix}/usr/lib/debug/*
+# %{_prefix}/usr/src/debug/*
+
+%dir
+%attr(0755,root,root) /usr/lib/debug
+
+#%changelog
+
+# 
+# Files required by Quattor
+#
+%doc MAINTAINER ChangeLog README
