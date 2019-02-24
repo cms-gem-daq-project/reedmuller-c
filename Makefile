@@ -6,19 +6,18 @@
 # $Author: vorpal $
 # $Date: 2002/12/09 04:25:43 $
 
-ifndef PETA_STAGE
-$(error "Error: PETA_STAGE environment variable not set, unable to compile for Zynq.")
-endif
+# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
+CFLAGS=-O0 -g3 -fno-inline -fPIC -Wall
+#-DCSTYLECALLOC
+CXXFLAGS=$(CFLAGS)
 
-# CC=gcc
-# #CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
-# CFLAGS=-O0 -g3 -fno-inline -std=c17 -Wall
+ifdef PETA_STAGE
+$(info INFO: PETA_STAGE environment variable set, compiling for Zynq.)
 
 CXX=arm-linux-gnueabihf-g++
 CC=arm-linux-gnueabihf-gcc
 
-CFLAGS= -O0 -g3 -fno-inline -std=c++14 -fPIC -Wall \
-	-march=armv7-a -mfpu=neon -mfloat-abi=hard \
+CFLAGS+= -march=armv7-a -mfpu=neon -mfloat-abi=hard \
 	-mthumb-interwork -mtune=cortex-a9 \
 	-DEMBED -Dlinux -D__linux__ -Dunix \
 	--sysroot=$(PETA_STAGE) \
@@ -28,8 +27,14 @@ CFLAGS= -O0 -g3 -fno-inline -std=c++14 -fPIC -Wall \
 LDLIBS= -L$(PETA_STAGE)/lib \
 	-L$(PETA_STAGE)/usr/lib \
 	-L$(PETA_STAGE)/ncurses
+else
+$(info WARNING: PETA_STAGE environment not variable set, compiling PC.)
+endif
 
-LDFLAGS = -fPIC -shared $(LDLIBS) -lm
+CC+= -std=c17
+CXX+= -std=c++17
+
+LDFLAGS = -fPIC $(LDLIBS) -lm
 
 TESTS=\
 # $(BIN_DIR)/testksubset
@@ -85,10 +90,10 @@ clean:
 # Main target
 $(LIBRARY): $(OBJECTS)
 	mkdir -p $(LIB_DIR)
-	$(CC) $(LDFLAGS) -Wl,-soname,libreedmuller.so -o $@ $^
+	$(CXX) $(LDFLAGS) -shared -Wl,-soname,libreedmuller.so -o $@ $^
 
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c
-	$(CC) $(CFLAGS) -c $(INCDIRS) -MT $@ -MMD -MP -MF $(OBJ_DIR)/$*.Td -o $@ $<
+	$(CXX) $(CFLAGS) -c $(INCDIRS) -MT $@ -MMD -MP -MF $(OBJ_DIR)/$*.Td -o $@ $<
 	mv $(OBJ_DIR)/$*.Td $(OBJ_DIR)/$*.d
 	touch $@
 
@@ -97,11 +102,11 @@ $(OBJ_DIR)/%.d:
 
 $(BIN_DIR)/%: $(SRC_DIR)/%.c $(LIBS)
 	mkdir -p $(BIN_DIR)
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $< -lreedmuller $(INCDIRS)
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $< -lreedmuller $(INCDIRS)
 
 # $(BIN_DIR)/testksubset: $(SRC_DIR)/testksubset.c $(LIBS)
 # 	mkdir -p $(BIN_DIR)
-# 	$(CC) $(CFLAGS) $(LDFLAGS)  -o $@ $< -L$(LIB_DIR) -lreedmuller
+# 	$(CXX) $(CFLAGS) $(LDFLAGS)  -o $@ $< -L$(LIB_DIR) -lreedmuller
 
 #
 # $Log: Makefile,v $
