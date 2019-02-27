@@ -36,6 +36,10 @@ Prefix: %{_prefix}
 Requires: __requires__
 %endif
 
+%if 0%{?_build_requires}
+BuildRequires: __build_requires__
+%endif
+
 %description
 __description__
 
@@ -52,6 +56,7 @@ __description__
 Summary:  Development package for %{_summary}
 Group:    Libraries/Math
 # Requires: %{_packagename}
+# BuildRequires: %{_packagename}
 
 %description -n %{_packagename}-devel
 __description__
@@ -63,6 +68,7 @@ __description__
 Summary:  Debuginfo package for %{_summary}
 Group:    Libraries/Math
 Requires: %{_packagename}
+# BuildRequires: %{_packagename}
 
 %description -n %{_packagename}-debuginfo
 __description__
@@ -161,7 +167,7 @@ fi
 %{_prefix}/lib/arm/lib%{_packagename}.so
 
 %dir
-%{_prefix}/include
+# %attr(0755,root,root) %{_prefix}/include
 
 #%changelog
 

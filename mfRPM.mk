@@ -1,10 +1,13 @@
-INSTALL_PATH = /opt/reedmuller
+INSTALL_PATH ?= /opt/reedmuller
 # Can we break this dep? only used for getting the build distribution...
 XDAQ_ROOT    = /opt/xdaq
 PWD          = $(shell pwd)
 BUILD_DATE   = $(shell date -u +"%d%m%Y")
 RELEASE      = cmsgem
 VERSION      = 1.0.0
+GITREV       = $(shell git rev-parse --short HEAD)
+GIT_VERSION  = $(shell git describe --dirty --always --tags)
+PACKAGER     = $(shell id --user --name)
 
 ifndef BUILD_VERSION
 BUILD_VERSION=1
@@ -23,8 +26,13 @@ PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_DISTRIBUTION)
 endif
 
 REQUIRES_LIST=0
-ifneq ($(PACKAGE_REQUIRED_PACKAGE_LIST),)
+ifneq ($(REQUIRED_PACKAGE_LIST),)
 REQUIRES_LIST=1
+endif
+
+BUILD_REQUIRES_LIST=0
+ifneq ($(BUILD_REQUIRED_PACKAGE_LIST),)
+BUILD_REQUIRES_LIST=1
 endif
 
 
@@ -46,11 +54,16 @@ spec_update:
 	sed -i 's#__prefix__#$(INSTALL_PATH)#'         ./rpm/reedmuller.spec
 	sed -i 's#__packagedir__#$(PWD)#'              ./rpm/reedmuller.spec
 	sed -i 's#__platform__#$(BUILD_DISTRIBUTION)#' ./rpm/reedmuller.spec
+	sed -i 's#__requires__#$(REQUIRED_PACKAGE_LIST)#' ./rpm/reedmuller.spec
+	sed -i 's#__build_requires__#$(BUILD_REQUIRED_PACKAGE_LIST)#' ./rpm/reedmuller.spec
 
 .PHONY: makerpm
 makerpm:
 	mkdir -p ./rpm/RPMBUILD/{RPMS/$(XDAQ_PLATFORM),SPECS,BUILD,SOURCES,SRPMS}
-	rpmbuild  --quiet -ba -bl --define "_requires $(REQUIRES_LIST)" --define  "_topdir $(PWD)/rpm/RPMBUILD" ./rpm/reedmuller.spec
+	rpmbuild  --quiet -ba -bl \
+	--define "_requires $(REQUIRES_LIST)" \
+	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
+	--define  "_topdir $(PWD)/rpm/RPMBUILD" ./rpm/reedmuller.spec
 	find  ./rpm/RPMBUILD -name "*.rpm" -exec mv {} ./rpm \;
 
 .PHONY: cleanrpm
