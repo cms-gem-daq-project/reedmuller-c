@@ -1,6 +1,8 @@
-INSTALL_PATH ?= /opt/reedmuller
+# ifndef INSTALL_PREFIX
+# INSTALL_PREFIX=/opt/reedmuller
+# endif
+
 # Can we break this dep? only used for getting the build distribution...
-XDAQ_ROOT    = /opt/xdaq
 PWD          = $(shell pwd)
 BUILD_DATE   = $(shell date -u +"%d%m%Y")
 RELEASE      = cmsgem
@@ -13,8 +15,12 @@ ifndef BUILD_VERSION
 BUILD_VERSION=1
 endif
 
+ifndef BUILD_COMPILER
+BUILD_COMPILER :=$(shell echo $(CC) | sed -e 's/-/_/g')$(shell $(CC) -dumpversion | sed -e 's/\./_/g')
+endif
+
 ifndef BUILD_DISTRIBUTION
-BUILD_DISTRIBUTION := $(shell $(XDAQ_ROOT)/config/checkos.sh)
+BUILD_DISTRIBUTION := $(shell /opt/xdaq/config/checkos.sh)
 endif
 
 ifndef PACKAGE_FULL_VERSION
@@ -22,7 +28,7 @@ PACKAGE_VERSION = $(VERSION)
 endif
 
 ifndef PACKAGE_FULL_RELEASE
-PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_DISTRIBUTION)
+PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_COMPILER).$(BUILD_DISTRIBUTION)
 endif
 
 REQUIRES_LIST=0
@@ -35,40 +41,46 @@ ifneq ($(BUILD_REQUIRED_PACKAGE_LIST),)
 BUILD_REQUIRES_LIST=1
 endif
 
-
 .PHONY: spec_update
 spec_update:
 	$(info "Executing GEM specific spec_update")
-	@mkdir -p ./rpm
-	if [ -e ./reedmuller.spec.template ]; then \
-		echo found reedmuller.spec.template; \
-		cp ./reedmuller.spec.template ./rpm/reedmuller.spec; \
-        else \
-		echo unable to find reedmuller.spec.template; \
-                exit 0; \
+	@mkdir -p $(PackagePath)/rpm
+	if [ -e $(PackagePath)/reedmuller.spec.template ]; then \
+		echo found $(PackagePath)/reedmuller.spec.template; \
+		cp $(PackagePath)/reedmuller.spec.template $(PackagePath)/rpm/reedmuller.spec; \
+	elif [ -e $(ProjectPath)/reedmuller.spec.template ]; then \
+		echo found $(ProjectPath)/reedmuller.spec.template; \
+		cp $(ProjectPath)/reedmuller.spec.template $(PackagePath)/rpm/reedmuller.spec; \
+	else \
+		@echo Error unable to find reedmuller.spec.template; \
+		exit 0; \
 	fi
 
-	sed -i 's#__builddate__#$(BUILD_DATE)#'        ./rpm/reedmuller.spec
-	sed -i 's#__release__#$(PACKAGE_RELEASE)#'     ./rpm/reedmuller.spec
-	sed -i 's#__version__#$(PACKAGE_VERSION)#'     ./rpm/reedmuller.spec
-	sed -i 's#__prefix__#$(INSTALL_PATH)#'         ./rpm/reedmuller.spec
-	sed -i 's#__packagedir__#$(PWD)#'              ./rpm/reedmuller.spec
-	sed -i 's#__platform__#$(BUILD_DISTRIBUTION)#' ./rpm/reedmuller.spec
-	sed -i 's#__requires__#$(REQUIRED_PACKAGE_LIST)#' ./rpm/reedmuller.spec
-	sed -i 's#__build_requires__#$(BUILD_REQUIRED_PACKAGE_LIST)#' ./rpm/reedmuller.spec
+	sed -i 's#__builddate__#$(BUILD_DATE)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__release__#$(PACKAGE_RELEASE)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__version__#$(PACKAGE_VERSION)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__prefix__#$(INSTALL_PREFIX)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__projectdir__#$(ProjectPath)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__packagedir__#$(PackagePath)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__platform__#$(BUILD_DISTRIBUTION)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__buildarch__#$(ARCH)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__arch__#$(ARCH)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__requires__#$(REQUIRED_PACKAGE_LIST)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__build_requires__#$(BUILD_REQUIRED_PACKAGE_LIST)#' $(PackagePath)/rpm/reedmuller.spec
 
 .PHONY: makerpm
 makerpm:
-	mkdir -p ./rpm/RPMBUILD/{RPMS/$(XDAQ_PLATFORM),SPECS,BUILD,SOURCES,SRPMS}
-	rpmbuild  --quiet -ba -bl \
+	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS/$(ARCH),SPECS,BUILD,SOURCES,SRPMS}
+	rpmbuild --quiet -ba -bl \
 	--define "_requires $(REQUIRES_LIST)" \
 	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
-	--define  "_topdir $(PWD)/rpm/RPMBUILD" ./rpm/reedmuller.spec
-	find  ./rpm/RPMBUILD -name "*.rpm" -exec mv {} ./rpm \;
+	--define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \
+	--target "$(ARCH)"
+	find  $(PackagePath)/rpm/RPMBUILD -name "*.rpm" -exec mv {} $(PackagePath)/rpm \;
 
 .PHONY: cleanrpm
 cleanrpm:
-	-rm -rf ./rpm
+	-rm -rf $(PackagePath)/rpm
 
 .PHONY: rpm
 rpm: all spec_update makerpm
