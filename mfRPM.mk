@@ -6,7 +6,7 @@
 PWD          = $(shell pwd)
 BUILD_DATE   = $(shell date -u +"%d%m%Y")
 RELEASE      = cmsgem
-VERSION      = 1.0.0
+VERSION      = 1.1.0
 GITREV       = $(shell git rev-parse --short HEAD)
 GIT_VERSION  = $(shell git describe --dirty --always --tags)
 PACKAGER     = $(shell id --user --name)
@@ -59,6 +59,8 @@ spec_update:
 	sed -i 's#__builddate__#$(BUILD_DATE)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__release__#$(PACKAGE_RELEASE)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__version__#$(PACKAGE_VERSION)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__author__#$(PACKAGER)#' $(PackagePath)/rpm/reedmuller.spec
+	sed -i 's#__gitrev__#$(GITREV)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__prefix__#$(INSTALL_PREFIX)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__projectdir__#$(ProjectPath)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__packagedir__#$(PackagePath)#' $(PackagePath)/rpm/reedmuller.spec

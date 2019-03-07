@@ -4,7 +4,7 @@
 %define _packagedir __packagedir__
 %define _version __version__
 %define _release __release__
-# %define _gitrev __gitrev__
+%define _gitrev __gitrev__
 %define _builddate __builddate__
 %define _prefix  __prefix__
 # %define _zynq_prefix  __zynq_prefix__
@@ -12,7 +12,7 @@
 %define _platform __platform__
 %define _author __author__
 %define _summary __summary__
-%define _url __url__
+%define _url https://github.com/jsturdy/reedmuller-c
 %define _buildarch __buildarch__
 %define _arch __arch__
 
