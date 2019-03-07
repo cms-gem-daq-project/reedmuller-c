@@ -16,10 +16,20 @@
 #include "common.h"
 #include <errno.h>
 #include <limits.h>
+#include <memory>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 static reedmuller rm = 0;
-static int *message  = 0;
-static int *codeword = 0;
+
+#ifndef UNIQUEPTR
+static int *message  = nullptr;
+static int *codeword = nullptr;
+#else
+static std::unique_ptr<int[]> message  = nullptr;
+static std::unique_ptr<int[]> codeword = nullptr;
+#endif
 
 static void cleanup()
 {
@@ -27,7 +37,7 @@ static void cleanup()
 #ifdef CSTYLECALLOC
   free(message);
   free(codeword);
-#else
+#elseif CPPSTYLENEW
   delete [] message;
   delete [] codeword;
 #endif
@@ -52,9 +62,12 @@ int main(int argc, char *argv[])
 #ifdef CSTYLECALLOC
       || (!(message  = (int*) calloc(rm->k, sizeof(int))))
       || (!(codeword = (int*) calloc(rm->n, sizeof(int))))
-#else
+#elseif CPPSTYLENEW
       || (!(message  = new int[rm->k]))
       || (!(codeword = new int[rm->n]))
+#else
+      || (!(message  = std::make_unique<int[]>(rm->k)))
+      || (!(codeword = std::make_unique<int[]>(rm->n)))
 #endif
       ) {
     fprintf(stderr, "out of memory\n");
@@ -81,6 +94,9 @@ int main(int argc, char *argv[])
     char *p;
     errno = 0;
 
+    std::stringstream conv_b;
+    std::stringstream mesg_b;
+
     uint32_t conv = strtoul(argv[i], &p, 2);
     if (errno != 0 || *p != '\0') {
       errno = 0;
@@ -95,33 +111,51 @@ int main(int argc, char *argv[])
       fprintf(stderr, "converted value to encode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
       continue;
     } else {
-#ifdef OUTPUTINPUT
-      printf("%u 0x%x 0b", conv, conv);
-#endif
       for (j=0; j < rm->k; ++j) {
-#ifdef OUTPUTINPUT
-        printf("%d", ((conv>>(rm->k-j-1)) & 0x1));
-#endif
+        conv_b << ((conv>>(rm->k-j-1)) & 0x1);
+#ifdef UNIQUEPTR
+        message.get()[(rm->k-j-1)] = (conv>>j) & 0x1;
+#else
         message[(rm->k-j-1)] = (conv>>j) & 0x1;
+#endif
       }
+#ifdef OUTPUTINPUT
+      printf("%u 0x%x 0b%s\n", conv, conv, conv_b.str().c_str());
+#endif
     }
 
-#ifdef OUTPUTINPUT
-    printf("message 0b");
     for (j=0; j < rm->k; ++j)
-      printf("%d", message[j]);
+#ifdef UNIQUEPTR
+      mesg_b << message.get()[j];
+#else
+      mesg_b << message[j];
+#endif
+
+#ifdef OUTPUTINPUT
+    printf("message 0b%s",mesg_b.str().c_str());
     printf(" -> 0b");
 #endif
 
     /* encode it */
+#ifdef UNIQUEPTR
+    reedmuller_encode(rm, message.get(), codeword.get());
+#else
     reedmuller_encode(rm, message, codeword);
+#endif
     char encoded[1024];
     char* ep = encoded;
+
+    std::stringstream enc_b;
+    int v = 0;
     for (j=0; j < rm->n; ++j) {
-      printf("%d", codeword[j]);
-      ep += sprintf(ep,"%d", codeword[j]);
+#ifdef UNIQUEPTR
+      v = codeword.get()[j];
+#else
+      v = codeword[j];
+#endif
+      enc_b << v;
+      ep += sprintf(ep,"%d", v);
     }
-    printf("\n");
 
     char *p2;
     errno = 0;
@@ -131,13 +165,19 @@ int main(int argc, char *argv[])
       fprintf(stderr, "unable to convert argument to int type\n");
       continue;
     }
+    printf("%s 0x%x (%u)\n",enc_b.str().c_str(),conv2,conv2);
 
 #ifdef DEBUG
     printf("codeword (address)  = %x\n", codeword );
     printf("message  (address)  = %x\n", message  );
     printf("convert  (address)  = %x\n", &conv    );
+#ifdef UNIQUEPTR
+    printf("*codeword (encoded) = %x\n", *(codeword.get()));
+    printf("*message  (encode)  = %x\n", *(message.get()) );
+#else
     printf("*codeword (encoded) = %x\n", *codeword);
     printf("*message  (encode)  = %x\n", *message );
+#endif
 #endif
 #ifdef OUTPUTINPUT
     printf("encode  = 0x%x\n",   conv  );

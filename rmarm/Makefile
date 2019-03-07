@@ -8,8 +8,13 @@
 
 PackagePath := $(shell pwd)
 
-# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC
-CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall
+## -DDEBUG: 
+## -DOUTPUTINPUT: 
+## -DCSTYLECALLOC: use calloc instead of new []
+## -DCPPSTYLENEW: use new [] instead of calloc
+## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
+# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW
+CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DUNIQUEPTR
 CXXFLAGS:=$(CFLAGS)
 
 ifndef PETA_STAGE
@@ -32,7 +37,7 @@ BUILD_DISTRIBUTION=peta
 LDLIBS= -L$(PETA_STAGE)/lib \
 	-L$(PETA_STAGE)/usr/lib \
 	-L$(PETA_STAGE)/ncurses
-CCFLAGS+=-std=c14
+CCFLAGS+=-std=c11
 CXXFLAGS+=-std=c++14
 
 LDFLAGS = -fPIC $(LDLIBS) -lm

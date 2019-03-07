@@ -16,10 +16,20 @@
 #include "common.h"
 #include <errno.h>
 #include <limits.h>
+#include <memory>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
 
 static reedmuller rm = 0;
-static int *received = 0;
-static int *message  = 0;
+
+#ifndef UNIQUEPTR
+static int *received = nullptr;
+static int *message  = nullptr;
+#else
+static std::unique_ptr<int[]> received = nullptr;
+static std::unique_ptr<int[]> message  = nullptr;
+#endif
 
 static void cleanup()
 {
@@ -27,7 +37,7 @@ static void cleanup()
 #ifdef CSTYLECALLOC
   free(received);
   free(message);
-#else
+#elseif CPPSTYLENEW
   delete [] received;
   delete [] message;
 #endif
@@ -40,7 +50,7 @@ int main(int argc, char *argv[])
   int r, m;
 
   if (argc < 4) {
-    fprintf(stderr, "usage: %s r m received1 [received2 [received3 [...]]]\n",
+    fprintf(stderr, "Usage: %s r m received1 [received2 [received3 [...]]]\n",
 	    argv[0]);
     exit(EXIT_FAILURE);
   }
@@ -52,12 +62,15 @@ int main(int argc, char *argv[])
 #ifdef CSTYLECALLOC
       || (!(received = (int*) calloc(rm->n, sizeof(int))))
       || (!(message  = (int*) calloc(rm->k, sizeof(int))))
-#else
+#elseif CPPSTYLENEW
       || (!(received = new int[rm->n]))
       || (!(message  = new int[rm->k]))
+#else
+      || (!(received = std::make_unique<int[]>(rm->n)))
+      || (!(message  = std::make_unique<int[]>(rm->k)))
 #endif
       ) {
-    fprintf(stderr, "out of memory\n");
+    fprintf(stderr, "Out of memory\n");
     cleanup();
     exit(EXIT_FAILURE);
   }
@@ -81,72 +94,103 @@ int main(int argc, char *argv[])
     char *p;
     errno = 0;
 
+    std::stringstream conv_b;
+    std::stringstream recv_b;
+
     uint32_t conv = strtoul(argv[i], &p, 2);
     if (errno != 0 || *p != '\0') {
       errno = 0;
       conv = strtoul(argv[i], &p, 0);
       if (errno != 0 || *p != '\0') {
-        fprintf(stderr, "unable to convert argument to int type\n");
+        fprintf(stderr, "Unable to convert argument to int type\n");
         continue;
       }
     }
 
     if (conv > maxcode) {
-      fprintf(stderr, "converted value to decode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
+      fprintf(stderr, "Converted value to decode (0x%x) is larger than allowed (%u) for this RM code generator\n", conv, maxcode);
       continue;
     } else {
-#ifdef OUTPUTINPUT
-      printf("%u 0x%x 0b", conv, conv);
-#endif
       for (j=0; j < rm->n; ++j) {
-#ifdef OUTPUTINPUT
-        printf("%d", ((conv>>(rm->n-j-1)) & 0x1));
-#endif
+        conv_b << ((conv>>(rm->n-j-1)) & 0x1);
+#ifdef UNIQUEPTR
+        received.get()[(rm->n-j-1)] = (conv>>j) & 0x1;
+#else
         received[(rm->n-j-1)] = (conv>>j) & 0x1;
+#endif
       }
-    }
 #ifdef OUTPUTINPUT
-    printf("received 0b");
+      printf("%u 0x%x 0b%s\n", conv, conv, conv_b.str().c_str());
+#endif
+    }
+
     for (j=0; j < rm->n; ++j)
-      printf("%d", received[j]);
+#ifdef UNIQUEPTR
+      recv_b << received.get()[j];
+#else
+      recv_b << received[j];
+#endif
+
+#ifdef OUTPUTINPUT
+    printf("received 0b%s",recv_b.str().c_str());
     printf(" -> 0b");
 #endif
 
     /* decode it */
+#ifdef UNIQUEPTR
+    int result = reedmuller_decode(rm, received.get(), message.get());
+#else
     int result = reedmuller_decode(rm, received, message);
+#endif
 
     if (result) {
       char decoded[1024];
       char* dp = decoded;
 
+      std::stringstream dec_b;
+      int v = 0;
       for (j=0; j < rm->k; ++j) {
-        printf("%d", message[j]);
-        dp += sprintf(dp,"%d", message[j]);
+#ifdef UNIQUEPTR
+        v = message.get()[j];
+#else
+        v = message[j];
+#endif
+        dec_b << v;
+        dp += sprintf(dp,"%d", v);
       }
-      printf("\n");
 
       char *p2;
       errno = 0;
 
       uint32_t conv2 = strtoul(decoded, &p2, 2);
       if (errno != 0 || *p2 != '\0') {
-        fprintf(stderr, "unable to convert argument to int type\n");
+        fprintf(stderr, "Unable to convert argument to int type\n");
         continue;
       }
+      printf("%s 0x%x (%u)\n",dec_b.str().c_str(),conv2,conv2);
 
 #ifdef DEBUG
       printf("codeword (address)  = %x\n", received );
       printf("message  (address)  = %x\n", message  );
       printf("convert  (address)  = %x\n", &conv    );
+#ifdef UNIQUEPTR
+      printf("*codeword (encoded) = %x\n", *(received.get()));
+      printf("*message  (encode)  = %x\n", *(message.get()) );
+#else
       printf("*codeword (encoded) = %x\n", *received);
       printf("*message  (encode)  = %x\n", *message );
+#endif
 #endif
 #ifdef OUTPUTINPUT
       printf("decode  = 0x%08x\n", conv  );
       printf("decoded = 0x%x\n",   conv2 );
 #endif
     } else {
+#ifdef UNIQUEPTR
+      printf("Unable to decode message 0x%08x, probably more than %d errors\n", *(received.get()), reedmuller_strength(rm) );
+#else
       printf("Unable to decode message 0x%08x, probably more than %d errors\n", *received, reedmuller_strength(rm) );
+#endif
       cleanup();
       exit(EXIT_FAILURE);
     }

@@ -54,7 +54,9 @@ python:
 
 rmarm:
 
-rmcore: rmarm
+rmcore:
+
+rmcore.RPM: rmarm
 
 #
 # $Log: Makefile,v $
