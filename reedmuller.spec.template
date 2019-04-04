@@ -18,11 +18,25 @@
 
 %define _unpackaged_files_terminate_build 0
 
+# Do not check any files in lib/arm for requires
+%global __requires_exclude_from ^%{_prefix}/lib/arm/.*$
+%global __requires_exclude_from ^%{_prefix}/lib/arm/*.*$
+# Do not check any files in bin/arm for requires
+%global __requires_exclude_from ^%{_prefix}/bin/arm/.*$
+%global __requires_exclude_from ^%{_prefix}/bin/arm/*.*$
+# # Do not check .so files in an arm-specific library directory for provides
+%global __provides_exclude_from ^%{_prefix}/lib/arm/*\\.so$
+%global __provides_exclude_from ^%{_prefix}/lib/arm/*\.so$
+
+%define add_arm_libs %( if [ -d 'lib/arm' ]; then echo "1" ; else echo "0"; fi )
+%define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+%define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+
 #
 # Binary RPM specified attributed (lib and bin)
 #
-Summary: %{_summary}
 Name: %{_packagename}
+Summary: %{_summary}
 Version: %{_version}
 Release: %{_release}
 Packager: %{_author}
@@ -31,8 +45,13 @@ Packager: %{_author}
 License: Apache 2.0
 Group: Libraries/Math
 URL: %{_url}
+# Source: https://github.com/jsturdy/reedmuller-c/tags/v%{_version}/%{_packagename}-%{_version}-%{_release}.tbz2
 BuildRoot: %{_tmppath}/%{_packagename}-%{_version}-%{_release}-buildroot
 Prefix: %{_prefix}
+
+%if %is_arm
+AutoReq: no
+%endif
 
 %if 0%{?_requires}
 Requires: __requires__
@@ -49,21 +68,13 @@ __description__
 # Devel RPM specified attributes (extension to binary rpm with include files)
 #
 
-# Do not check any files in lib/arm for requires
-%global __requires_exclude_from ^%{_prefix}/lib/arm/.*$
-# Do not check any files in bin/arm for requires
-%global __requires_exclude_from ^%{_prefix}/bin/arm/.*$
-# Do not check .so files in an arm-specific library directory for provides
-%global __provides_exclude_from ^%{_prefix}/lib/arm/*\\.so$
-
-%define add_arm_libs %( if [ -d 'lib/arm' ]; then echo "1" ; else echo "0"; fi )
-%define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
-%define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
-
 
 %package -n %{_packagename}-devel
 Summary:  Development package for %{_summary}
 Group:    Libraries/Math
+%if %is_arm
+AutoReq: no
+%endif
 # Requires: %{_packagename}
 # BuildRequires: %{_packagename}
 
@@ -76,19 +87,25 @@ __description__
 %package -n %{_packagename}-debuginfo
 Summary:  Debuginfo package for %{_summary}
 Group:    Libraries/Math
+%if %is_arm
+AutoReq: no
+%endif
 Requires: %{_packagename}
 # BuildRequires: %{_packagename}
 
 %description -n %{_packagename}-debuginfo
 __description__
 
-#%pre
+%if %not_arm
+%pre
 
-#%prep
+%prep
 
-#%setup 
+# %setup
+## requires valid source tarball
 
-#%build
+%build
+%endif
 
 #
 # Prepare the list of files that are the input to the binary and devel RPMs

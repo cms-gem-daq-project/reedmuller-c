@@ -41,6 +41,11 @@ ifneq ($(BUILD_REQUIRED_PACKAGE_LIST),)
 BUILD_REQUIRES_LIST=1
 endif
 
+RPM_OPTIONS=--quiet -ba -bl
+ifeq ($(ARCH),arm)
+	RPM_OPTIONS=--quiet -ba -bl --define "_binary_payload 1"
+endif
+
 .PHONY: spec_update
 spec_update:
 	$(info "Executing GEM specific spec_update")
@@ -73,7 +78,7 @@ spec_update:
 .PHONY: makerpm
 makerpm:
 	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS/$(ARCH),SPECS,BUILD,SOURCES,SRPMS}
-	rpmbuild --quiet -ba -bl \
+	rpmbuild $(RPM_OPTIONS) \
 	--define "_requires $(REQUIRES_LIST)" \
 	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
 	--define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \

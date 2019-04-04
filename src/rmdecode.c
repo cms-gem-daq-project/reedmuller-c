@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 #elseif CPPSTYLENEW
       || (!(received = new int[rm->n]))
       || (!(message  = new int[rm->k]))
-#else
+#elseif UNIQUEPTR
       || (!(received = std::make_unique<int[]>(rm->n)))
       || (!(message  = std::make_unique<int[]>(rm->k)))
 #endif

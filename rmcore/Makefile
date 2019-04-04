@@ -13,7 +13,7 @@ PackagePath := $(shell pwd)
 ## -DCPPSTYLENEW: use new [] instead of calloc
 ## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
 # CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW
-CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DUNIQUEPTR
+CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DCPPSTYLENEW
 CXXFLAGS:=$(CFLAGS)
 
 ifdef PETA_STAGE
@@ -23,7 +23,7 @@ endif
 INSTALL_PREFIX=/opt/reedmuller
 ARCH=x86_64
 CFLAGS+=-std=c11
-CXXFLAGS+=-std=c++14
+CXXFLAGS+=-std=c++11
 CXX=g++
 CC=gcc
 
@@ -59,12 +59,12 @@ df = $(OBJ_DIR)/$(*F)
 
 .PHONY: all clean preprpm
 
-# rpm: preprpm
+rpm: preprpm
 
-# preprpm:
-# 	@echo "Running preprpm target"
-# 	mkdir -p $(LIB_DIR)/arm
-# 	@cp -rfp $(ProjectPath)/rmarm/lib/*.so $(LIB_DIR)/arm
+preprpm:
+	@echo "Running preprpm target"
+	mkdir -p $(LIB_DIR)/arm
+	@cp -rfp $(ProjectPath)/rmarm/lib/*.so $(LIB_DIR)/arm
 
 all: $(PROGS) $(LIBS) $(OBJECTS) $(TESTS)
 
