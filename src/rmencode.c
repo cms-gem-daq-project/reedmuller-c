@@ -34,12 +34,13 @@ static std::unique_ptr<int[]> codeword = nullptr;
 static void cleanup()
 {
   reedmuller_free(rm);
-#ifdef CSTYLECALLOC
-  free(message);
-  free(codeword);
-#elseif CPPSTYLENEW
+#ifdef UNIQUEPTR
+#elif defined(CPPSTYLENEW)
   delete [] message;
   delete [] codeword;
+#else
+  free(message);
+  free(codeword);
 #endif
 }
 
@@ -59,15 +60,15 @@ int main(int argc, char *argv[])
   r = atoi(argv[1]);
   m = atoi(argv[2]);
   if ((!(rm = reedmuller_init(r, m)))
-#ifdef CSTYLECALLOC
-      || (!(message  = (int*) calloc(rm->k, sizeof(int))))
-      || (!(codeword = (int*) calloc(rm->n, sizeof(int))))
-#elseif CPPSTYLENEW
+#ifdef UNIQUEPTR
+      || (!(message  = make_unique<int[]>(rm->k)))
+      || (!(codeword = make_unique<int[]>(rm->n)))
+#elif defined(CPPSTYLENEW)
       || (!(message  = new int[rm->k]))
       || (!(codeword = new int[rm->n]))
-#elseif UNIQUEPTR
-      || (!(message  = std::make_unique<int[]>(rm->k)))
-      || (!(codeword = std::make_unique<int[]>(rm->n)))
+#else
+      || (!(message  = (int*) calloc(rm->k, sizeof(int))))
+      || (!(codeword = (int*) calloc(rm->n, sizeof(int))))
 #endif
       ) {
     fprintf(stderr, "out of memory\n");
@@ -165,19 +166,18 @@ int main(int argc, char *argv[])
       fprintf(stderr, "unable to convert argument to int type\n");
       continue;
     }
-    printf("%s 0x%x (%u)\n",enc_b.str().c_str(),conv2,conv2);
+    /* printf("%s 0x%x %u\n",enc_b.str().c_str(),conv2,conv2); */
+    printf("0x%x\n",conv2);
 
 #ifdef DEBUG
+    printf("codeword (address)  = %x\n", codeword );
+    printf("message  (address)  = %x\n", message  );
     printf("convert  (address)  = %x\n", &conv    );
 #ifdef UNIQUEPTR
-    printf("codeword (address)  = %x\n", codeword.get() );
     printf("*codeword (encoded) = %x\n", *(codeword.get()));
-    printf("message  (address)  = %x\n", message.get()  );
     printf("*message  (encode)  = %x\n", *(message.get()) );
 #else
-    printf("codeword (address)  = %x\n", codeword );
     printf("*codeword (encoded) = %x\n", *codeword);
-    printf("message  (address)  = %x\n", message  );
     printf("*message  (encode)  = %x\n", *message );
 #endif
 #endif

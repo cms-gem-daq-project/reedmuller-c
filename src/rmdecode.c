@@ -34,12 +34,13 @@ static std::unique_ptr<int[]> message  = nullptr;
 static void cleanup()
 {
   reedmuller_free(rm);
-#ifdef CSTYLECALLOC
-  free(received);
-  free(message);
-#elseif CPPSTYLENEW
+#ifdef UNIQUEPTR
+#elif defined(CPPSTYLENEW)
   delete [] received;
   delete [] message;
+#else
+  free(received);
+  free(message);
 #endif
 }
 
@@ -59,15 +60,15 @@ int main(int argc, char *argv[])
   r = atoi(argv[1]);
   m = atoi(argv[2]);
   if ((!(rm = reedmuller_init(r, m)))
-#ifdef CSTYLECALLOC
-      || (!(received = (int*) calloc(rm->n, sizeof(int))))
-      || (!(message  = (int*) calloc(rm->k, sizeof(int))))
-#elseif CPPSTYLENEW
+#ifdef UNIQUEPTR
+      || (!(received = make_unique<int[]>(rm->n)))
+      || (!(message  = make_unique<int[]>(rm->k)))
+#elif defined(CPPSTYLENEW)
       || (!(received = new int[rm->n]))
       || (!(message  = new int[rm->k]))
-#elseif UNIQUEPTR
-      || (!(received = std::make_unique<int[]>(rm->n)))
-      || (!(message  = std::make_unique<int[]>(rm->k)))
+#else
+      || (!(received = (int*) calloc(rm->n, sizeof(int))))
+      || (!(message  = (int*) calloc(rm->k, sizeof(int))))
 #endif
       ) {
     fprintf(stderr, "Out of memory\n");
@@ -170,19 +171,18 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Unable to convert argument to int type\n");
         continue;
       }
-      printf("%s 0x%x (%u)\n",dec_b.str().c_str(),conv2,conv2);
+      /* printf("%s 0x%x (%u)\n",dec_b.str().c_str(),conv2,conv2); */
+      printf("0x%x\n",conv2);
 
 #ifdef DEBUG
+      printf("codeword (address)  = %x\n", received );
+      printf("message  (address)  = %x\n", message  );
       printf("convert  (address)  = %x\n", &conv    );
 #ifdef UNIQUEPTR
-      printf("codeword (address)  = %x\n", received.get() );
       printf("*codeword (encoded) = %x\n", *(received.get()));
-      printf("message  (address)  = %x\n", message.get()  );
       printf("*message  (encode)  = %x\n", *(message.get()) );
 #else
-      printf("codeword (address)  = %x\n", received );
       printf("*codeword (encoded) = %x\n", *received);
-      printf("message  (address)  = %x\n", message  );
       printf("*message  (encode)  = %x\n", *message );
 #endif
 #endif
@@ -192,11 +192,11 @@ int main(int argc, char *argv[])
 #endif
     } else {
       printf("Unable to decode message 0x%s, probably more than %d errors\n", recv_b.str().c_str(), reedmuller_strength(rm) );
-/* #ifdef UNIQUEPTR */
-/*       printf("Unable to decode message 0x%08x, probably more than %d errors\n", *(received.get()), reedmuller_strength(rm) ); */
-/* #else */
-/*       printf("Unable to decode message 0x%08x, probably more than %d errors\n", *received, reedmuller_strength(rm) ); */
-/* #endif */
+#ifdef UNIQUEPTR
+      printf("Unable to decode message 0x%08x, probably more than %d errors\n", *(received.get()), reedmuller_strength(rm) );
+#else
+      printf("Unable to decode message 0x%08x, probably more than %d errors\n", *received, reedmuller_strength(rm) );
+#endif
       cleanup();
       exit(EXIT_FAILURE);
     }
