@@ -113,6 +113,9 @@ int main(int argc, char *argv[])
     } else {
       for (j=0; j < rm->n; ++j) {
         conv_b << ((conv>>(rm->n-j-1)) & 0x1);
+#ifdef OUTPUTINPUT
+        printf("Value at index %d (%d-%d-1) will be %d", rm->n-j-1,rm->n,j, (conv>>j)&0x1);
+#endif
 #ifdef UNIQUEPTR
         received.get()[(rm->n-j-1)] = (conv>>j) & 0x1;
 #else
@@ -170,14 +173,16 @@ int main(int argc, char *argv[])
       printf("%s 0x%x (%u)\n",dec_b.str().c_str(),conv2,conv2);
 
 #ifdef DEBUG
-      printf("codeword (address)  = %x\n", received );
-      printf("message  (address)  = %x\n", message  );
       printf("convert  (address)  = %x\n", &conv    );
 #ifdef UNIQUEPTR
+      printf("codeword (address)  = %x\n", received.get() );
       printf("*codeword (encoded) = %x\n", *(received.get()));
+      printf("message  (address)  = %x\n", message.get()  );
       printf("*message  (encode)  = %x\n", *(message.get()) );
 #else
+      printf("codeword (address)  = %x\n", received );
       printf("*codeword (encoded) = %x\n", *received);
+      printf("message  (address)  = %x\n", message  );
       printf("*message  (encode)  = %x\n", *message );
 #endif
 #endif
@@ -186,11 +191,12 @@ int main(int argc, char *argv[])
       printf("decoded = 0x%x\n",   conv2 );
 #endif
     } else {
-#ifdef UNIQUEPTR
-      printf("Unable to decode message 0x%08x, probably more than %d errors\n", *(received.get()), reedmuller_strength(rm) );
-#else
-      printf("Unable to decode message 0x%08x, probably more than %d errors\n", *received, reedmuller_strength(rm) );
-#endif
+      printf("Unable to decode message 0x%s, probably more than %d errors\n", recv_b.str().c_str(), reedmuller_strength(rm) );
+/* #ifdef UNIQUEPTR */
+/*       printf("Unable to decode message 0x%08x, probably more than %d errors\n", *(received.get()), reedmuller_strength(rm) ); */
+/* #else */
+/*       printf("Unable to decode message 0x%08x, probably more than %d errors\n", *received, reedmuller_strength(rm) ); */
+/* #endif */
       cleanup();
       exit(EXIT_FAILURE);
     }

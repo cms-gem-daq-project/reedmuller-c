@@ -7,13 +7,15 @@
 # $Date: 2002/12/09 04:25:43 $
 
 PackagePath := $(shell pwd)
+ProjectPath := $(PackagePath)/..
 ## -DDEBUG: 
 ## -DOUTPUTINPUT: 
 ## -DCSTYLECALLOC: use calloc instead of new []
 ## -DCPPSTYLENEW: use new [] instead of calloc
 ## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
-# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW
-CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DCPPSTYLENEW
+# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW -DUNIQUEPTR
+CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DDEBUG -DCPPSTYLENEW
+# -DCPPSTYLENEW
 CXXFLAGS:=$(CFLAGS)
 
 ifdef PETA_STAGE

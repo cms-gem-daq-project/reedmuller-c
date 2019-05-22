@@ -96,7 +96,7 @@ Requires: %{_packagename}
 %description -n %{_packagename}-debuginfo
 __description__
 
-%if %not_arm
+# %if %not_arm
 %pre
 
 %prep
@@ -105,7 +105,7 @@ __description__
 ## requires valid source tarball
 
 %build
-%endif
+# %endif
 
 #
 # Prepare the list of files that are the input to the binary and devel RPMs

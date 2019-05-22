@@ -168,14 +168,16 @@ int main(int argc, char *argv[])
     printf("%s 0x%x (%u)\n",enc_b.str().c_str(),conv2,conv2);
 
 #ifdef DEBUG
-    printf("codeword (address)  = %x\n", codeword );
-    printf("message  (address)  = %x\n", message  );
     printf("convert  (address)  = %x\n", &conv    );
 #ifdef UNIQUEPTR
+    printf("codeword (address)  = %x\n", codeword.get() );
     printf("*codeword (encoded) = %x\n", *(codeword.get()));
+    printf("message  (address)  = %x\n", message.get()  );
     printf("*message  (encode)  = %x\n", *(message.get()) );
 #else
+    printf("codeword (address)  = %x\n", codeword );
     printf("*codeword (encoded) = %x\n", *codeword);
+    printf("message  (address)  = %x\n", message  );
     printf("*message  (encode)  = %x\n", *message );
 #endif
 #endif
