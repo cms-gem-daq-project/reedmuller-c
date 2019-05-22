@@ -12,7 +12,7 @@ SUBPACKAGES.CLEAN    := $(patsubst %,%.clean,    $(SUBPACKAGES))
 ProjectPath := $(shell pwd)
 export ProjectPath
 
-.PHONY: build clean cleanall cleandoc cleanrpm
+.PHONY: all build clean cleanall cleandoc cleanrpm
 
 build: $(SUBPACKAGES)
 

@@ -8,24 +8,27 @@
 
 PackagePath := $(shell pwd)
 ProjectPath := $(PackagePath)/..
-## -DDEBUG: 
-## -DOUTPUTINPUT: 
-## -DCSTYLECALLOC: use calloc instead of new []
-## -DCPPSTYLENEW: use new [] instead of calloc
-## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
-# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW -DUNIQUEPTR
-CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DDEBUG -DCPPSTYLENEW
-# -DCPPSTYLENEW
-CXXFLAGS:=$(CFLAGS)
 
 ifdef PETA_STAGE
-$(info PETA_STAGE environment variable set, may not be able to compile for PC.)
+$(info PETA_STAGE environment variable set, will not be able to build RPMs.)
 endif
 
 INSTALL_PREFIX=/opt/reedmuller
 ARCH=x86_64
+
+## -DDEBUG:
+## -DOUTPUTINPUT:
+## -DCSTYLECALLOC: use calloc instead of new []
+## -DCPPSTYLENEW: use new [] instead of calloc
+## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int* BROKEN in c++11
+# CFLAGS=-g3 -ansi -Wall
+CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall
+CFLAGS+=-DCSTYLENEW
+CXXFLAGS:=$(CFLAGS)
+
 CFLAGS+=-std=c11
 CXXFLAGS+=-std=c++11
+
 CXX=g++
 CC=gcc
 
@@ -59,18 +62,11 @@ LDFLAGS+= $(LIBDIRS)
 # destination path macro we'll use below
 df = $(OBJ_DIR)/$(*F)
 
-.PHONY: all clean preprpm
-
-rpm: preprpm
-
-preprpm:
-	@echo "Running preprpm target"
-	mkdir -p $(LIB_DIR)/arm
-	@cp -rfp $(ProjectPath)/rmarm/lib/*.so $(LIB_DIR)/arm
+build: $(PROGS) $(LIBS) $(OBJECTS)
 
 all: $(PROGS) $(LIBS) $(OBJECTS) $(TESTS)
 
-default: $(PROGS) $(LIBS) $(OBJECTS)
+default: build
 
 tests: $(TESTS)
 
@@ -142,3 +138,8 @@ print-env:
 -include $(AUTODEPS)
 
 include $(ProjectPath)/mfRPM.mk
+
+rpmprep:
+	@echo "Running preprpm target"
+	mkdir -p $(LIB_DIR)/arm
+	@cp -rfp $(ProjectPath)/rmarm/lib/*.so $(LIB_DIR)/arm

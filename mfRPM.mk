@@ -46,8 +46,21 @@ ifeq ($(ARCH),arm)
 	RPM_OPTIONS=--quiet -ba -bl --define "_binary_payload 1"
 endif
 
-.PHONY: spec_update
-spec_update:
+.PHONY: rpm
+rpm: rpmbuild
+
+.PHONY: rpmbuild
+rpmbuild: all spec_update
+	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS/$(ARCH),SPECS,BUILD,SOURCES,SRPMS}
+	rpmbuild $(RPM_OPTIONS) \
+	--define "_requires $(REQUIRES_LIST)" \
+	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
+	--define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \
+	--target "$(ARCH)"
+	find  $(PackagePath)/rpm/RPMBUILD -name "*.rpm" -exec mv {} $(PackagePath)/rpm \;
+
+.PHONY: spec_update rpmprep
+spec_update: rpmprep
 	$(info "Executing GEM specific spec_update")
 	@mkdir -p $(PackagePath)/rpm
 	if [ -e $(PackagePath)/reedmuller.spec.template ]; then \
@@ -75,19 +88,6 @@ spec_update:
 	sed -i 's#__requires__#$(REQUIRED_PACKAGE_LIST)#' $(PackagePath)/rpm/reedmuller.spec
 	sed -i 's#__build_requires__#$(BUILD_REQUIRED_PACKAGE_LIST)#' $(PackagePath)/rpm/reedmuller.spec
 
-.PHONY: makerpm
-makerpm:
-	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS/$(ARCH),SPECS,BUILD,SOURCES,SRPMS}
-	rpmbuild $(RPM_OPTIONS) \
-	--define "_requires $(REQUIRES_LIST)" \
-	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
-	--define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \
-	--target "$(ARCH)"
-	find  $(PackagePath)/rpm/RPMBUILD -name "*.rpm" -exec mv {} $(PackagePath)/rpm \;
-
 .PHONY: cleanrpm
 cleanrpm:
 	-rm -rf $(PackagePath)/rpm
-
-.PHONY: rpm
-rpm: all spec_update makerpm

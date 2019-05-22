@@ -9,38 +9,38 @@
 PackagePath := $(shell pwd)
 ProjectPath := $(PackagePath)/..
 
-## -DDEBUG: 
-## -DOUTPUTINPUT: 
-## -DCSTYLECALLOC: use calloc instead of new []
-## -DCPPSTYLENEW: use new [] instead of calloc
-## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
-# CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT -DCSTYLECALLOC -DCPPSTYLENEW -DUNIQUEPTR
-CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall -DDEBUG -DCPPSTYLENEW
-CXXFLAGS:=$(CFLAGS)
-
 ifndef PETA_STAGE
 $(error PETA_STAGE environment variable not set, unable to compile for Zynq.)
 endif
 
-CXX=arm-linux-gnueabihf-g++
-CC=arm-linux-gnueabihf-gcc
-
+INSTALL_PREFIX=/mnt/persistent/gemdaq
+ARCH=arm
+BUILD_DISTRIBUTION=peta
+## -DDEBUG:
+## -DOUTPUTINPUT:
+## -DCSTYLECALLOC: use calloc instead of new []
+## -DCPPSTYLENEW: use new [] instead of calloc
+## -DUNIQUEPTR: use std::unique_ptr<int[]> instead of int*
+# CFLAGS=-g3 -ansi -Wall
+CFLAGS:=-O0 -g3 -fno-inline -fPIC -Wall
+CFLAGS+=-DCSTYLENEW
 CFLAGS+= -march=armv7-a -mfpu=neon -mfloat-abi=hard \
 	-mthumb-interwork -mtune=cortex-a9 \
 	-DEMBED -Dlinux -D__linux__ -Dunix \
 	--sysroot=$(PETA_STAGE) \
 	-I$(PETA_STAGE)/usr/include \
 	-I$(PETA_STAGE)/include
+CXXFLAGS:=$(CFLAGS)
 
-ARCH=arm
-INSTALL_PREFIX=/mnt/persistent/gemdaq
-BUILD_DISTRIBUTION=peta
-LDLIBS= -L$(PETA_STAGE)/lib \
-	-L$(PETA_STAGE)/usr/lib \
-	-L$(PETA_STAGE)/ncurses
 CCFLAGS+=-std=c11
 CXXFLAGS+=-std=c++14
 
+CXX=arm-linux-gnueabihf-g++
+CC=arm-linux-gnueabihf-gcc
+
+LDLIBS= -L$(PETA_STAGE)/lib \
+	-L$(PETA_STAGE)/usr/lib \
+	-L$(PETA_STAGE)/ncurses
 LDFLAGS = -fPIC $(LDLIBS) -lm
 
 TESTS=\
