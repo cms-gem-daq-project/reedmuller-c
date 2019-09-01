@@ -6,7 +6,7 @@
 PWD          = $(shell pwd)
 BUILD_DATE   = $(shell date -u +"%d%m%Y")
 RELEASE      = cmsgem
-VERSION      = 1.1.0
+VERSION      = 1.1.1
 GITREV       = $(shell git rev-parse --short HEAD)
 GIT_VERSION  = $(shell git describe --dirty --always --tags)
 PACKAGER     = $(shell id --user --name)
@@ -23,12 +23,13 @@ ifndef BUILD_DISTRIBUTION
 BUILD_DISTRIBUTION := $(shell /opt/xdaq/config/checkos.sh)
 endif
 
-ifndef PACKAGE_FULL_VERSION
+ifndef PACKAGE_VERSION
 PACKAGE_VERSION = $(VERSION)
 endif
 
-ifndef PACKAGE_FULL_RELEASE
-PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_COMPILER).$(BUILD_DISTRIBUTION)
+ifndef PACKAGE_RELEASE
+#PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_COMPILER).$(BUILD_DISTRIBUTION)
+PACKAGE_RELEASE = $(BUILD_VERSION).$(RELEASE).$(BUILD_DISTRIBUTION).$(BUILD_COMPILER)
 endif
 
 REQUIRES_LIST=0
@@ -41,7 +42,7 @@ ifneq ($(BUILD_REQUIRED_PACKAGE_LIST),)
 BUILD_REQUIRES_LIST=1
 endif
 
-RPM_OPTIONS=--quiet -ba -bl
+RPM_OPTIONS=--quiet -ba -bl --rpmfcdebug
 ifeq ($(ARCH),arm)
 	RPM_OPTIONS=--quiet -ba -bl --define "_binary_payload 1"
 endif
@@ -51,12 +52,13 @@ rpm: rpmbuild
 
 .PHONY: rpmbuild
 rpmbuild: all spec_update
-	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS/$(ARCH),SPECS,BUILD,SOURCES,SRPMS}
+	mkdir -p $(PackagePath)/rpm/RPMBUILD/{RPMS,SPECS,BUILD,SOURCES,SRPMS}
 	rpmbuild $(RPM_OPTIONS) \
-	--define "_requires $(REQUIRES_LIST)" \
-	--define "_build_requires $(BUILD_REQUIRES_LIST)" \
-	--define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \
-	--target "$(ARCH)"
+	    --define "_release $(PACKAGE_RELEASE).$(BUILD_DISTRIBUTION).$(BUILD_COMPILER)" \
+	    --define "_requires $(REQUIRES_LIST)" \
+	    --define "_build_requires $(BUILD_REQUIRES_LIST)" \
+	    --define  "_topdir $(PWD)/rpm/RPMBUILD" $(PackagePath)/rpm/reedmuller.spec \
+	    --target "$(ARCH)"
 	find  $(PackagePath)/rpm/RPMBUILD -name "*.rpm" -exec mv {} $(PackagePath)/rpm \;
 
 .PHONY: spec_update rpmprep

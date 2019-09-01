@@ -16,21 +16,11 @@
 %define _buildarch __buildarch__
 %define _arch __arch__
 
-%define _unpackaged_files_terminate_build 0
-
-# Do not check any files in lib/arm for requires
-%global __requires_exclude_from ^%{_prefix}/lib/arm/.*$
-%global __requires_exclude_from ^%{_prefix}/lib/arm/*.*$
-# Do not check any files in bin/arm for requires
-%global __requires_exclude_from ^%{_prefix}/bin/arm/.*$
-%global __requires_exclude_from ^%{_prefix}/bin/arm/*.*$
-# # Do not check .so files in an arm-specific library directory for provides
-%global __provides_exclude_from ^%{_prefix}/lib/arm/*\\.so$
-%global __provides_exclude_from ^%{_prefix}/lib/arm/*\.so$
-
-%define add_arm_libs %( if [ -d 'lib/arm' ]; then echo "1" ; else echo "0"; fi )
+%define add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
 %define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
 %define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+
+%define _unpackaged_files_terminate_build 0
 
 #
 # Binary RPM specified attributed (lib and bin)
@@ -64,11 +54,11 @@ BuildRequires: __build_requires__
 %description
 __description__
 
+## Only build devel and debuginfo RPMs for non-ARM
+%if %not_arm
 #
 # Devel RPM specified attributes (extension to binary rpm with include files)
 #
-
-
 %package -n %{_packagename}-devel
 Summary:  Development package for %{_summary}
 Group:    Libraries/Math
@@ -96,79 +86,84 @@ Requires: %{_packagename}
 %description -n %{_packagename}-debuginfo
 __description__
 
-# %if %not_arm
+%endif
+
 %pre
 
 %prep
-
-# %setup
+# %%setup
 ## requires valid source tarball
 
 %build
-# %endif
 
 #
 # Prepare the list of files that are the input to the binary and devel RPMs
 #
 %install
-rm -rf $RPM_BUILD_ROOT
-mkdir -p $RPM_BUILD_ROOT%{_prefix}/{bin,lib}
+rm -rf %{buildroot}
+mkdir -p %{buildroot}%{_prefix}/{bin,lib}
 
 if [ -d %{_packagedir}/lib ]; then
    cd %{_packagedir}/lib; \
-   find . -name "*.so" -exec install -D -m 755 {} $RPM_BUILD_ROOT/%{_prefix}/lib/{} \;
+   find . -name "*.so" -exec install -D -m 755 {} %{buildroot}/%{_prefix}/lib/{} \;
 fi
 
 if [ -d %{_packagedir}/bin ]; then
    cd %{_packagedir}/bin; \
-   find . -name "*" -exec install -D -m 755 {} $RPM_BUILD_ROOT/%{_prefix}/bin/{} \;
+   find . -name "*" -exec install -D -m 755 {} %{buildroot}/%{_prefix}/bin/{} \;
+fi
+
+if [ -e %{_projectdir}/ChangeLog ]; then
+   install -m 644 %{_projectdir}/ChangeLog %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
+fi
+
+if [ -e %{_projectdir}/README ]; then
+   install -m 644 %{_projectdir}/README %{_packagedir}/rpm/RPMBUILD/BUILD/README
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/README
+fi
+
+if [ -e %{_projectdir}/MAINTAINER ]; then
+   install -m 644 %{_projectdir}/MAINTAINER %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
+fi
+
+if [ -e %{_projectdir}/LICENSE ]; then
+   install -m 644 %{_projectdir}/LICENSE %{_packagedir}/rpm/RPMBUILD/BUILD/LICENSE
+else
+   touch %{_packagedir}/rpm/RPMBUILD/BUILD/LICENSE
 fi
 
 if [[ ! %{_buildarch} =~ "arm" ]]; then
    echo "Building RPM for non-ARM architecture (%{_buildarch})";
-   mkdir -p $RPM_BUILD_ROOT%{_prefix}/include;
-   mkdir -p $RPM_BUILD_ROOT/usr/lib/debug%{_prefix}/lib;
-   mkdir -p $RPM_BUILD_ROOT/usr/src/debug/%{_packagename}-%{_version};
+   mkdir -p %{buildroot}%{_prefix}/include;
+   mkdir -p %{buildroot}/usr/lib/debug%{_prefix}/lib;
+   mkdir -p %{buildroot}/usr/src/debug/%{_packagename}-%{_version};
    
    if [ -d %{_projectdir}/include ]; then \
       cd %{_projectdir}/include; \
-      find . -name "*.h" -exec install -D -m 644 {} $RPM_BUILD_ROOT/%{_prefix}/include/{} \;
+      find . -name "*.h" -exec install -D -m 655 {} %{buildroot}/%{_prefix}/include/{} \;
    fi
    
    if [ -d %{_projectdir}/src ]; then
       cd %{_projectdir}/src; \
-      find . -name "*.c" -exec install -D -m 644 {} $RPM_BUILD_ROOT/usr/src/debug/%{_prefix}/src/{} \;
-   fi
-   
-   if [ -e %{_projectdir}/ChangeLog ]; then
-      install -m 644 %{_projectdir}/ChangeLog %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
-   else
-      touch %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
-   fi
-   
-   if [ -e %{_projectdir}/README ]; then
-      install -m 644 %{_projectdir}/README %{_packagedir}/rpm/RPMBUILD/BUILD/README
-   else
-      touch %{_packagedir}/rpm/RPMBUILD/BUILD/README
-   fi
-   
-   if [ -e %{_projectdir}/MAINTAINER ]; then
-      install -m 644 %{_projectdir}/MAINTAINER %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
-   else
-      touch %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
+      find . -name "*.c" -exec install -D -m 655 {} %{buildroot}/usr/src/debug/%{_packagename}-%{_version}/src/{} \;
    fi
 else
    echo "Building RPM for ARM architecture (%{_buildarch}), not packaging everything"
 fi ## end check on x86_64 arch only
 
 %clean
-rm -rf $RPM_BUILD_ROOT
+rm -rf %{buildroot}
 
 #
 # Files that go in the binary RPM for the x86_64 machine
 #
 %files
-%defattr(-,root,root,755)
+%defattr(-,root,root,0755)
 # %{_prefix}/lib/lib%{_packagename}_%{_platform}_%{_buildarch}.so
 %{_prefix}/lib/lib%{_packagename}.so
 
@@ -176,43 +171,46 @@ rm -rf $RPM_BUILD_ROOT
 %attr(0755,root,root) %{_prefix}/bin
 # %attr(0755,root,root) %{_prefix}/lib
 
+## Only build devel and debuginfo RPMs for non-ARM
+%if %not_arm
 #
 # Files that go in the devel RPM
 #
+# Do not check any files in bin/arm for requires
+# Do not check any files in lib/arm for requires
+# Do not check .so files in an arm-specific library directory for provides
+%define __requires_exclude_from ^%{_prefix}/lib/arm/.*$
+%define __provides_exclude_from ^%{_prefix}/lib/arm/.*$
+%define __requires_exclude ^%{_prefix}/lib/arm/.*\\.so$
+%define __provides_exclude ^%{_prefix}/lib/arm/.*\\.so$
+
 %files -n %{_packagename}-devel
-%defattr(-,root,root,644)
+%defattr(-,root,root,0755)
 
-%if %not_arm
-%if %add_arm_libs
-%attr(0755,root,root) %{_prefix}/lib/arm/lib%{_packagename}.so
-%endif
-
+## %%%if %add_arm_libs
+## %%%attr(0755,root,root) %{_prefix}/lib/arm/lib%{_packagename}.so
+## %%%endif
+## %%
+%{_prefix}/lib/arm/*.so
 %{_prefix}/include/*.h
 
 %dir
 # %attr(0755,root,root) %{_prefix}/include
 
 %doc MAINTAINER ChangeLog README
+%changelog ChangeLog
 
-#%changelog
+#
+# Files that go in the debuginfo RPM
+#
+%files -n %{_packagename}-debuginfo
+%defattr(-,root,root,0755)
+
+%dir
+/usr/lib/debug
+/usr/src/debug
+
+%doc MAINTAINER README
+%changelog ChangeLog
 
 %endif
-
-
-# #
-# # Files that go in the debuginfo RPM
-# #
-# %files -n %{_packagename}-debuginfo
-# %defattr(-,root,root,755)
-
-# %if %not_arm
-# %{_prefix}/usr/lib/debug/*
-# %{_prefix}/usr/src/debug/*
-
-# %doc MAINTAINER ChangeLog README
-
-# %dir
-# %attr(0755,root,root) /usr/lib/debug
-
-# # %changelog
-# %endif
