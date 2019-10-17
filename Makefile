@@ -25,7 +25,7 @@ ProjectPath := $(shell pwd)
 export ProjectPath
 
 .PHONY: all build default install uninstall rpm release
-.PHONY: clean cleanall cleanrpm cleanallrpm
+.PHONY: clean cleanrpm cleandoc cleanallrpm cleanall
 
 default: all
 

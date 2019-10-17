@@ -8,6 +8,7 @@
 
 BUILD_HOME   := $(shell dirname `pwd`)
 Project      := reedmuller-c
+ShortProject := reedmuller
 Package      := reedmuller
 ShortPackage := reedmuller
 LongPackage  := $(TargetArch)
@@ -63,7 +64,7 @@ REEDMULLER_VER_PATCH:=$(shell $(ConfigDir)/tag2rel.sh | awk '{split($$0,a," "); 
 IncludeDirs = $(PackageIncludeDir)
 INC=$(IncludeDirs:%=-I%)
 
-LibraryDirs = $(PackageLibraryDir:%=-L%)
+LibraryDirs=$(PackageLibraryDir)
 
 TESTS=\
 # $(PackageExecDir)/testksubset
@@ -80,8 +81,8 @@ AUTODEPS= $(patsubst   $(PackageSourceDir)/%.c,$(PackageObjectDir)/%.d,$(SOURCES
 OBJECTS = $(patsubst %.d,%.o,$(AUTODEPS))
 LIBRARY = $(PackageLibraryDir)/libreedmuller.so
 
-LDFLAGS+=-lm
-LDFLAGS+=-shared $(LibraryDirs)
+LDFLAGS+=$(LibraryDirs:%=-L%)
+LDLIBS+=-lm
 
 ## Override the RPM_DIR variable because we're a special case
 RPM_DIR:=$(ProjectPath)/$(LongPackage)/rpm
@@ -105,7 +106,13 @@ all: $(PROGS) $(LIBS) $(OBJECTS) $(TESTS)
 tests: $(TESTS)
 
 clean:
-	rm -rf $(PackageObjectDir) $(PackageLibraryDir) $(PackageExecDir)
+	$(RM) $(OBJECTS)
+	$(RM) $(PackageLibraryDir)
+	$(RM) $(PackageExecDir)
+
+cleanall:
+	$(RM) $(PackageObjectDir)
+	$(RM) $(PackagePath)
 
 ## @reedmuller Prepare the package for building the RPM
 rpmprep: default
@@ -131,23 +138,19 @@ endif
 	@cp -rfp $(PackageIncludeDir) $(PackagePath)/$(PackageDir)
 	@cp -rfp reedmuller.mk $(PackagePath)/$(PackageDir)/Makefile
 	@cp -rfp $(ProjectPath)/config $(PackagePath)/$(PackageDir)
-#	cd $(ProjectPath); cp -rfp --parents xhal/Makefile $(PackagePath)/$(PackageDir)
-#	cd $(ProjectPath); cp -rfp --parents xhal/{include,src} $(PackagePath)/$(PackageDir)
 	cd $(PackagePath)/$(PackageDir)/..; \
 	    tar cjf $(PackageSourceTarball) . ;
-#	$(RM) $(PackagePath)/$(PackageDir)
 
 # Main target
 $(LIBRARY): $(OBJECTS)
 	$(MakeDir) $(@D)
-	$(CXX) $(LDFLAGS) -o $(@D)/$(LibraryFull) $^
+	$(CXX) $(LDFLAGS) $(SOFLAGS) -o $(@D)/$(LibraryFull) $^ $(LDLIBS)
 	$(link-sonames)
 
 $(PackageObjectDir)/%.o: $(PackageSourceDir)/%.c
 	$(MakeDir) $(@D)
 	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(INC) -c -MT $@ -MMD -MP -MF $(PackageObjectDir)/$*.Td -o $@ $<
 	mv $(@D)/$(*F).Td $(@D)/$(*F).d
-#	mv $(PackageObjectDir)/$*.Td $(PackageObjectDir)/$*.d
 	touch $@
 
 $(PackageObjectDir)/%.d:
@@ -155,11 +158,11 @@ $(PackageObjectDir)/%.d:
 
 $(PackageExecDir)/%: $(PackageSourceDir)/%.c $(LIBS)
 	$(MakeDir) $(@D)
-	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(INC) $(LDFLAGS) -o $@ $< -lreedmuller
+	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(INC) $(LDFLAGS) -o $@ $< -lreedmuller $(LDLIBS)
 
 # $(PackageExecDir)/testksubset: $(PackageSourceDir)/testksubset.c $(LIBS)
-# 	mkdir -p $(PackageExecDir)
-# 	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(LDFLAGS)  -o $@ $< -L$(PackageLibraryDir) -lreedmuller
+# 	$(MakeDir) $(PackageExecDir)
+# 	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(LDFLAGS) -o $@ $< -L$(PackageLibraryDir) -lreedmuller $(LDLIBS)
 
 #
 # $Log: Makefile,v $

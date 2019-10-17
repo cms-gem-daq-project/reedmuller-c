@@ -171,7 +171,7 @@ popd
 %doc %{_project}/MAINTAINER.md
 %doc %{_project}/README.md
 %doc %{_project}/CHANGELOG.md
-%license %{_project}/%{_packagename}/LICENSE
+%license %{_project}/LICENSE
 
 ## Only build devel and debuginfo RPMs for non-ARM
 %if %not_arm
