@@ -1,26 +1,37 @@
-%define _package reedmuller
-%define _packagename %{_package}
-%define _projectdir __projectdir__
-%define _packagedir __packagedir__
+%define _package __package__
+%define _longpackage __longpackage__
+%define _packagename __packagename__
 %define _version __version__
-%define _release __release__
-%define _gitrev __gitrev__
-%define _builddate __builddate__
+%define _short_release __short_release__
 %define _prefix  __prefix__
-# %define _zynq_prefix  __zynq_prefix__
+#%%define _sources_dir __sources_dir__
 %define _tmppath /tmp
+#%%define _packagedir __packagedir__
+%define _os __os__
 %define _platform __platform__
+%define _project __project__
 %define _author __author__
 %define _summary __summary__
+#%%define _url __url__
 %define _url https://github.com/jsturdy/reedmuller-c
 %define _buildarch __buildarch__
-%define _arch __arch__
+#%%define _includedirs __includedirs__
 
-%define add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
-%define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
-%define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+%define _gitrev __gitrev__
+%define _builddate __builddate__
 
+%global _binaries_in_noarch_packages_terminate_build 0
 %define _unpackaged_files_terminate_build 0
+
+#%%global add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
+%global is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+%global not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+
+%global _find_debuginfo_opts -g
+
+#%%define add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
+#%%define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+#%%define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
 
 #
 # Binary RPM specified attributed (lib and bin)
@@ -39,10 +50,6 @@ URL: %{_url}
 BuildRoot: %{_tmppath}/%{_packagename}-%{_version}-%{_release}-buildroot
 Prefix: %{_prefix}
 
-%if %is_arm
-AutoReq: no
-%endif
-
 %if 0%{?_requires}
 Requires: __requires__
 %endif
@@ -51,8 +58,29 @@ Requires: __requires__
 BuildRequires: __build_requires__
 %endif
 
+%if %is_arm
+AutoReq: no
+%endif
+
 %description
 __description__
+
+%if %is_arm
+%package -n ctp7-%{_packagename}-libs
+Summary: Libraries for cross-compiling %{_packagename} dependent applications for CTP7
+Prefix: /opt/gem-peta-stage/ctp7/%{_prefix}
+Requires: gem-peta-stage-ctp7
+%if 0%{?_build_requires}
+BuildRequires: __build_requires__
+%endif
+BuildArch: noarch
+AutoReq: no
+
+%description -n ctp7-%{_packagename}-libs
+Provides the %{_packagename} libraries for the CTP7.
+These libraries are used when cross-compiling CTP7 applications.
+
+%endif
 
 ## Only build devel and debuginfo RPMs for non-ARM
 %if %not_arm
@@ -61,15 +89,12 @@ __description__
 #
 %package -n %{_packagename}-devel
 Summary:  Development package for %{_summary}
-Group:    Libraries/Math
-%if %is_arm
-AutoReq: no
-%endif
-# Requires: %{_packagename}
-# BuildRequires: %{_packagename}
+Requires: %{_packagename}
 
 %description -n %{_packagename}-devel
 __description__
+
+%endif
 
 #
 # Debuginfo RPM specified attributes (extension to binary rpm with include files)
@@ -86,119 +111,82 @@ Requires: %{_packagename}
 %description -n %{_packagename}-debuginfo
 __description__
 
-%endif
-
 %pre
 
 %prep
-# %%setup
-## requires valid source tarball
+#%%setup -q
+mv %{_sourcedir}/%{_project}-%{_longpackage}-%{_version}-%{_short_release}.tbz2 ./
+tar xjf %{_project}-%{_longpackage}-%{_version}-%{_short_release}.tbz2
+
+## update extracted timestamps if doing a git build
+find %{_project} -type f -iname '*.h' -print0 -exec touch {} \+
+find %{_project} -type f \( -iname '*.cpp' -o -iname '*.c' -o -iname '*.cxx' \) -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.d' -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.o' -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.so*' -print0 -exec touch {} \+
+find %{_project} -type l -iname '*.so*' -print0 -exec touch -h {} \+
 
 %build
+pushd %{_project}
+TargetArch=%{_longpackage} make -j4
+popd
 
 #
 # Prepare the list of files that are the input to the binary and devel RPMs
 #
 %install
 rm -rf %{buildroot}
-mkdir -p %{buildroot}%{_prefix}/{bin,lib}
+pushd %{_project}
+echo TargetArch=%{_longpackage} INSTALL_PREFIX=%{buildroot} make install
+TargetArch=%{_longpackage} INSTALL_PREFIX=%{buildroot} make install
+touch ChangeLog README.md LICENSE MAINTAINER.md CHANGELOG.md
+popd
 
-if [ -d %{_packagedir}/lib ]; then
-   cd %{_packagedir}/lib; \
-   find . -name "*.so" -exec install -D -m 755 {} %{buildroot}/%{_prefix}/lib/{} \;
-fi
+%if %is_arm
+pushd %{_project}
+mkdir -p %{buildroot}/opt/
+cp -rfp --parents gem-peta-stage %{buildroot}/opt/
+popd
+%endif
 
-if [ -d %{_packagedir}/bin ]; then
-   cd %{_packagedir}/bin; \
-   find . -name "*" -exec install -D -m 755 {} %{buildroot}/%{_prefix}/bin/{} \;
-fi
-
-if [ -e %{_projectdir}/ChangeLog ]; then
-   install -m 644 %{_projectdir}/ChangeLog %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
-else
-   touch %{_packagedir}/rpm/RPMBUILD/BUILD/ChangeLog
-fi
-
-if [ -e %{_projectdir}/README ]; then
-   install -m 644 %{_projectdir}/README %{_packagedir}/rpm/RPMBUILD/BUILD/README
-else
-   touch %{_packagedir}/rpm/RPMBUILD/BUILD/README
-fi
-
-if [ -e %{_projectdir}/MAINTAINER ]; then
-   install -m 644 %{_projectdir}/MAINTAINER %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
-else
-   touch %{_packagedir}/rpm/RPMBUILD/BUILD/MAINTAINER
-fi
-
-if [ -e %{_projectdir}/LICENSE ]; then
-   install -m 644 %{_projectdir}/LICENSE %{_packagedir}/rpm/RPMBUILD/BUILD/LICENSE
-else
-   touch %{_packagedir}/rpm/RPMBUILD/BUILD/LICENSE
-fi
-
-if [[ ! %{_buildarch} =~ "arm" ]]; then
-   echo "Building RPM for non-ARM architecture (%{_buildarch})";
-   mkdir -p %{buildroot}%{_prefix}/include;
-   mkdir -p %{buildroot}/usr/lib/debug%{_prefix}/lib;
-   mkdir -p %{buildroot}/usr/src/debug/%{_packagename}-%{_version};
-   
-   if [ -d %{_projectdir}/include ]; then \
-      cd %{_projectdir}/include; \
-      find . -name "*.h" -exec install -D -m 655 {} %{buildroot}/%{_prefix}/include/{} \;
-   fi
-   
-   if [ -d %{_projectdir}/src ]; then
-      cd %{_projectdir}/src; \
-      find . -name "*.c" -exec install -D -m 655 {} %{buildroot}/usr/src/debug/%{_packagename}-%{_version}/src/{} \;
-   fi
-else
-   echo "Building RPM for ARM architecture (%{_buildarch}), not packaging everything"
-fi ## end check on x86_64 arch only
+## Manually run find-debuginfo because...?
+## maybe only on x86_64?
+/usr/lib/rpm/find-debuginfo.sh -g -m -r --strict-build-id
 
 %clean
-rm -rf %{buildroot}
+#rm -rf %{buildroot}
 
 #
 # Files that go in the binary RPM for the x86_64 machine
 #
 %files
 %defattr(-,root,root,0755)
-# %{_prefix}/lib/lib%{_packagename}_%{_platform}_%{_buildarch}.so
-%{_prefix}/lib/lib%{_packagename}.so
+%{_prefix}/lib/lib%{_packagename}.so*
+%{_prefix}/bin/rmencode
+%{_prefix}/bin/rmdecode
 
 %dir
 %attr(0755,root,root) %{_prefix}/bin
-# %attr(0755,root,root) %{_prefix}/lib
+
+%doc %{_project}/MAINTAINER.md
+%doc %{_project}/README.md
+%doc %{_project}/CHANGELOG.md
+%license %{_project}/%{_packagename}/LICENSE
 
 ## Only build devel and debuginfo RPMs for non-ARM
 %if %not_arm
 #
 # Files that go in the devel RPM
 #
-# Do not check any files in bin/arm for requires
-# Do not check any files in lib/arm for requires
-# Do not check .so files in an arm-specific library directory for provides
-%define __requires_exclude_from ^%{_prefix}/lib/arm/.*$
-%define __provides_exclude_from ^%{_prefix}/lib/arm/.*$
-%define __requires_exclude ^%{_prefix}/lib/arm/.*\\.so$
-%define __provides_exclude ^%{_prefix}/lib/arm/.*\\.so$
-
 %files -n %{_packagename}-devel
 %defattr(-,root,root,0755)
 
-## %%%if %add_arm_libs
-## %%%attr(0755,root,root) %{_prefix}/lib/arm/lib%{_packagename}.so
-## %%%endif
-## %%
-%{_prefix}/lib/arm/*.so
 %{_prefix}/include/*.h
 
 %dir
-# %attr(0755,root,root) %{_prefix}/include
+%attr(0644,root,root) %{_prefix}/include
 
-%doc MAINTAINER ChangeLog README
-%changelog ChangeLog
+%endif
 
 #
 # Files that go in the debuginfo RPM
@@ -210,7 +198,10 @@ rm -rf %{buildroot}
 /usr/lib/debug
 /usr/src/debug
 
-%doc MAINTAINER README
-%changelog ChangeLog
+%post
 
-%endif
+%preun
+
+%postun
+
+%changelog
