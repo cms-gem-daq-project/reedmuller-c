@@ -1,68 +1,103 @@
-SUBPACKAGES := \
-	rmarm \
-        rmcore
+TARGETS := arm x86_64
 
-SUBPACKAGES.DEBUG    := $(patsubst %,%.debug,    $(SUBPACKAGES))
-SUBPACKAGES.RPM      := $(patsubst %,%.rpm,      $(SUBPACKAGES))
-SUBPACKAGES.DOC      := $(patsubst %,%.doc,      $(SUBPACKAGES))
-SUBPACKAGES.CLEANRPM := $(patsubst %,%.cleanrpm, $(SUBPACKAGES))
-SUBPACKAGES.CLEANDOC := $(patsubst %,%.cleandoc, $(SUBPACKAGES))
-SUBPACKAGES.CLEAN    := $(patsubst %,%.clean,    $(SUBPACKAGES))
+TARGETS.RPM        := $(patsubst %,%.rpm,         $(TARGETS))
+TARGETS.CLEAN      := $(patsubst %,%.clean,       $(TARGETS))
+TARGETS.CLEANRPM   := $(patsubst %,%.cleanrpm,    $(TARGETS))
+TARGETS.CLEANALLRPM:= $(patsubst %,%.cleanallrpm, $(TARGETS))
+TARGETS.CLEANALL   := $(patsubst %,%.cleanall,    $(TARGETS))
+TARGETS.CHECKABI   := $(patsubst %,%.checkabi,    $(TARGETS))
+TARGETS.INSTALL    := $(patsubst %,%.install,     $(TARGETS))
+TARGETS.UNINSTALL  := $(patsubst %,%.uninstall,   $(TARGETS))
+TARGETS.RELEASE    := $(patsubst %,%.release,     $(TARGETS))
+
+.PHONY: $(TARGETS) \
+	$(TARGETS.RPM) \
+	$(TARGETS.CLEAN) \
+	$(TARGETS.CLEANRPM) \
+	$(TARGETS.CLEANALLRPM) \
+	$(TARGETS.CLEANALL) \
+	$(TARGETS.CHECKABI) \
+	$(TARGETS.INSTALL) \
+	$(TARGETS.UNINSTALL) \
+	$(TARGETS.RELEASE)
 
 ProjectPath := $(shell pwd)
 export ProjectPath
 
-.PHONY: all build clean cleanall cleandoc cleanrpm
+.PHONY: all build default install uninstall rpm release
+.PHONY: clean cleanall cleanrpm cleanallrpm
 
-build: $(SUBPACKAGES)
+default: all
 
-all: $(SUBPACKAGES) $(SUBPACKAGES.RPM) $(SUBPACKAGES.DOC)
+build: $(TARGETS)
 
-rpm: $(SUBPACKAGES) $(SUBPACKAGES.RPM)
+all: $(TARGETS) doc
 
-doc: $(SUBPACKAGES.DOC)
+rpm: $(TARGETS) $(TARGETS.RPM)
 
-cleanrpm: $(SUBPACKAGES.CLEANRPM)
+clean: $(TARGETS.CLEAN)
 
-cleandoc: $(SUBPACKAGES.CLEANDOC)
+cleanall: $(TARGETS.CLEANALL) cleandoc
 
-clean: $(SUBPACKAGES.CLEAN)
+cleanrpm: $(TARGETS.CLEANRPM)
 
-cleanall: clean cleandoc cleanrpm
+cleanallrpm: $(TARGETS.CLEANALLRPM)
 
-$(SUBPACKAGES):
-	$(MAKE) -C $@
+checkabi: $(TARGETS.CHECKABI)
 
-$(SUBPACKAGES.RPM): $(SUBPACKAGES)
-	$(MAKE) -C $(patsubst %.rpm,%, $@) rpm
+install: $(TARGETS.INSTALL)
 
-$(SUBPACKAGES.DOC):
-	$(MAKE) -C $(patsubst %.doc,%, $@) doc
+uninstall: $(TARGETS.UNINSTALL)
 
-$(SUBPACKAGES.CLEANRPM):
-	$(MAKE) -C $(patsubst %.cleanrpm,%, $@) cleanrpm
+release: $(TARGETS.RELEASE)
 
-$(SUBPACKAGES.CLEANDOC):
-	$(MAKE) -C $(patsubst %.cleandoc,%, $@) cleandoc
+$(TARGETS):
+	TargetArch=$@ $(MAKE) -f reedmuller.mk
 
-$(SUBPACKAGES.CLEAN):
-	$(MAKE) -C $(patsubst %.clean,%, $@) clean
+$(TARGETS.RPM): $(TARGETS)
+	TargetArch=$(patsubst %.rpm,%,$@) $(MAKE) -f reedmuller.mk rpm
 
-.PHONY: $(SUBPACKAGES) \
-	$(SUBPACKAGES.INSTALL) \
-	$(SUBPACKAGES.CLEAN) \
-	$(SUBPACKAGES.DOC) \
-	$(SUBPACKAGES.RPM) \
-	$(SUBPACKAGES.CLEANRPM) \
-	$(SUBPACKAGES.CLEANDOC)
+$(TARGETS.CLEAN):
+	TargetArch=$(patsubst %.clean,%,$@) $(MAKE) -f reedmuller.mk clean
 
-python:
+$(TARGETS.CLEANRPM):
+	TargetArch=$(patsubst %.cleanrpm,%,$@) $(MAKE) -f reedmuller.mk cleanrpm
 
-rmarm:
+$(TARGETS.CLEANALLRPM):
+	TargetArch=$(patsubst %.cleanallrpm,%,$@) $(MAKE) -f reedmuller.mk cleanallrpm
 
-rmcore:
+$(TARGETS.CLEANALL):
+	TargetArch=$(patsubst %.cleanall,%,$@) $(MAKE) -f reedmuller.mk cleanall
 
-rmcore.RPM: rmarm
+$(TARGETS.CHECKABI):
+	TargetArch=$(patsubst %.checkabi,%,$@) $(MAKE) -f reedmuller.mk checkabi
+
+$(TARGETS.INSTALL): $(TARGETS)
+	TargetArch=$(patsubst %.install,%,$@) $(MAKE) -f reedmuller.mk install
+
+$(TARGETS.UNINSTALL):
+	TargetArch=$(patsubst %.uninstall,%,$@) $(MAKE) -f reedmuller.mk uninstall
+
+$(TARGETS.RELEASE):
+	TargetArch=$(patsubst %.release,%,$@) $(MAKE) -f reedmuller.mk release
+
+#python:
+
+doc: 
+	@echo "TO DO"
+
+cleandoc: 
+	@echo "TO DO"
+
+x86_64:
+
+arm:
+
+ctp7:
+
+bcp:
+
+apx:
 
 #
 # $Log: Makefile,v $
