@@ -164,6 +164,16 @@ $(PackageExecDir)/%: $(PackageSourceDir)/%.c $(LIBS)
 # 	$(MakeDir) $(PackageExecDir)
 # 	$(CXX) $(CXXFLAGS) $(ADDFLAGS) $(LDFLAGS) -o $@ $< -L$(PackageLibraryDir) -lreedmuller $(LDLIBS)
 
+ifeq ($(Arch),x86_64)
+else
+TARGET_BOARD?=ctp7
+
+install: crosslibinstall
+
+uninstall: crosslibuninstall
+
+endif
+
 #
 # $Log: Makefile,v $
 # Revision 1.7  2019/02/27 14:21:43  jsturdy
