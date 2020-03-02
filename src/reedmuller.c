@@ -13,7 +13,7 @@
 #include "vector.h"
 #include "common.h"
 #include "reedmuller.h"
-
+#include <math.h>
 
 reedmuller reedmuller_init(int r, int m)
 {
@@ -281,7 +281,28 @@ int reedmuller_decode(reedmuller rm, int *received, int *message)
   /* we were successful */
   return TRUE;
 }
-      
+
+
+int reedmuller_strength(reedmuller rm)
+{
+  return pow(2, (rm->m - rm->r - 1)) - 1;
+}
+
+uint32_t reedmuller_maxencode(reedmuller rm)
+{
+  uint32_t maxencode = 0;
+  for (uint32_t i = 0; i < rm->k; ++i)
+    maxencode |= 0x1<<i;
+  return maxencode;
+}
+
+uint32_t reedmuller_maxdecode(reedmuller rm)
+{
+  uint32_t maxdecode = 0;
+  for (uint32_t i = 0; i < rm->n; ++i)
+    maxdecode |= 0x1<<i;
+  return maxdecode;
+}
 
 /*
  * $Log: reedmuller.c,v $

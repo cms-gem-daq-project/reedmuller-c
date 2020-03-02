@@ -1,60 +1,113 @@
-# Makefile
-#
-# By Sebastian Raaphorst, 2002
-# ID#: 1256241
-#
-# $Author: vorpal $
-# $Date: 2002/12/09 04:25:43 $
+TARGETS := arm x86_64
 
-CC=gcc
-#CFLAGS=-g3 -ansi -Wall -DDEBUG -DOUTPUTINPUT
-CFLAGS=-O3 -ansi -Wall
+TARGETS.RPM        := $(patsubst %,%.rpm,         $(TARGETS))
+TARGETS.CLEAN      := $(patsubst %,%.clean,       $(TARGETS))
+TARGETS.CLEANRPM   := $(patsubst %,%.cleanrpm,    $(TARGETS))
+TARGETS.CLEANALLRPM:= $(patsubst %,%.cleanallrpm, $(TARGETS))
+TARGETS.CLEANALL   := $(patsubst %,%.cleanall,    $(TARGETS))
+TARGETS.CHECKABI   := $(patsubst %,%.checkabi,    $(TARGETS))
+TARGETS.INSTALL    := $(patsubst %,%.install,     $(TARGETS))
+TARGETS.UNINSTALL  := $(patsubst %,%.uninstall,   $(TARGETS))
+TARGETS.RELEASE    := $(patsubst %,%.release,     $(TARGETS))
 
-TESTS=\
-#	testksubset
+.PHONY: $(TARGETS) \
+	$(TARGETS.RPM) \
+	$(TARGETS.CLEAN) \
+	$(TARGETS.CLEANRPM) \
+	$(TARGETS.CLEANALLRPM) \
+	$(TARGETS.CLEANALL) \
+	$(TARGETS.CHECKABI) \
+	$(TARGETS.INSTALL) \
+	$(TARGETS.UNINSTALL) \
+	$(TARGETS.RELEASE)
 
-PROGS=\
-	rmencode\
-	rmdecode
+ProjectPath := $(shell pwd)
+export ProjectPath
 
-OBJS=\
-	matrix.o\
-	ksubset.o\
-	combination.o\
-	vector.o\
-	reedmuller.o
+.PHONY: all build default install uninstall rpm release
+.PHONY: clean cleanrpm cleandoc cleanallrpm cleanall
 
-all:		$(PROGS) $(OBJS) $(TESTS)
+default: all
 
-clean:
-		rm -rf *~ $(PROGS) $(OBJS) $(TESTS)
+build: $(TARGETS)
 
-matrix.o:	matrix.h matrix.c common.h
-		$(CC) $(CFLAGS) -o matrix.o -c matrix.c
+all: $(TARGETS) doc
 
-combination.o:	combination.h combination.c matrix.h common.h
-		$(CC) $(CFLAGS) -o combination.o -c combination.c
+rpm: $(TARGETS) $(TARGETS.RPM)
 
-ksubset.o:	ksubset.h ksubset.c combination.h common.h
-		$(CC) $(CFLAGS) -o ksubset.o -c ksubset.c
+clean: $(TARGETS.CLEAN)
 
-vector.o:	vector.h vector.c
-		$(CC) $(CFLAGS) -o vector.o -c vector.c
+cleanall: $(TARGETS.CLEANALL) cleandoc
 
-reedmuller.o:	reedmuller.h reedmuller.c common.h matrix.h ksubset.h vector.h
-		$(CC) $(CFLAGS) -o reedmuller.o -c reedmuller.c
+cleanrpm: $(TARGETS.CLEANRPM)
 
-testksubset:	testksubset.c common.h $(OBJS)
-		$(CC) $(CFLAGS) -o testksubset testksubset.c $(OBJS)
+cleanallrpm: $(TARGETS.CLEANALLRPM)
 
-rmencode:	rmencode.c $(OBJS)
-		$(CC) $(CFLAGS) -o rmencode rmencode.c $(OBJS)
+checkabi: $(TARGETS.CHECKABI)
 
-rmdecode:	rmdecode.c $(OBJS)
-		$(CC) $(CFLAGS) -o rmdecode rmdecode.c $(OBJS)
+install: $(TARGETS.INSTALL)
+
+uninstall: $(TARGETS.UNINSTALL)
+
+release: $(TARGETS.RELEASE)
+
+$(TARGETS):
+	TargetArch=$@ $(MAKE) -f reedmuller.mk
+
+$(TARGETS.RPM): $(TARGETS)
+	TargetArch=$(patsubst %.rpm,%,$@) $(MAKE) -f reedmuller.mk rpm
+
+$(TARGETS.CLEAN):
+	TargetArch=$(patsubst %.clean,%,$@) $(MAKE) -f reedmuller.mk clean
+
+$(TARGETS.CLEANRPM):
+	TargetArch=$(patsubst %.cleanrpm,%,$@) $(MAKE) -f reedmuller.mk cleanrpm
+
+$(TARGETS.CLEANALLRPM):
+	TargetArch=$(patsubst %.cleanallrpm,%,$@) $(MAKE) -f reedmuller.mk cleanallrpm
+
+$(TARGETS.CLEANALL):
+	TargetArch=$(patsubst %.cleanall,%,$@) $(MAKE) -f reedmuller.mk cleanall
+
+$(TARGETS.CHECKABI):
+	TargetArch=$(patsubst %.checkabi,%,$@) $(MAKE) -f reedmuller.mk checkabi
+
+$(TARGETS.INSTALL): $(TARGETS)
+	TargetArch=$(patsubst %.install,%,$@) $(MAKE) -f reedmuller.mk install
+
+$(TARGETS.UNINSTALL):
+	TargetArch=$(patsubst %.uninstall,%,$@) $(MAKE) -f reedmuller.mk uninstall
+
+$(TARGETS.RELEASE):
+	TargetArch=$(patsubst %.release,%,$@) $(MAKE) -f reedmuller.mk release
+
+#python:
+
+doc: 
+	@echo "TO DO"
+
+cleandoc: 
+	@echo "TO DO"
+
+x86_64:
+
+arm:
+
+ctp7:
+
+bcp:
+
+apx:
 
 #
 # $Log: Makefile,v $
+# Revision 1.7  2019/02/27 14:21:43  jsturdy
+# Adapt for building on Zynq (for CTP7 card) as well as CERN centos7 machine
+#
+# $Log: Makefile,v $
+# Revision 1.6  2019/01/30 14:21:43  jsturdy
+# Make libreedmuller.so as a shared library
+#
 # Revision 1.5  2002/12/09 04:25:43  vorpal
 # Fixed some glaring errors in reedmuller.c
 # Still need to fix problems with decoding; not doing it properly.
@@ -72,3 +125,14 @@ rmdecode:	rmdecode.c $(OBJS)
 # Initial checkin.
 #
 #
+print-env:
+	@echo ProjectPath    $(ProjectPath)
+	@echo PackagePath    $(PackagePath)
+	@echo PETA_STAGE     $(PETA_STAGE)
+	@echo CC             $(CC)
+	@echo CXX            $(CXX)
+	@echo CFLAGS         $(CFLAGS)
+	@echo CXXFLAGS       $(CXXFLAGS)
+	@echo ARCH           $(ARCH)
+	@echo LDFLAGS        $(LDFLAGS)
+	@echo INSTALL_PREFIX $(INSTALL_PREFIX)

@@ -1,0 +1,207 @@
+%define _package __package__
+%define _longpackage __longpackage__
+%define _packagename __packagename__
+%define _version __version__
+%define _short_release __short_release__
+%define _prefix  __prefix__
+#%%define _sources_dir __sources_dir__
+%define _tmppath /tmp
+#%%define _packagedir __packagedir__
+%define _os __os__
+%define _platform __platform__
+%define _project __project__
+%define _author __author__
+%define _summary __summary__
+#%%define _url __url__
+%define _url https://github.com/jsturdy/reedmuller-c
+%define _buildarch __buildarch__
+#%%define _includedirs __includedirs__
+
+%define _gitrev __gitrev__
+%define _builddate __builddate__
+
+%global _binaries_in_noarch_packages_terminate_build 0
+%define _unpackaged_files_terminate_build 0
+
+#%%global add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
+%global is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+%global not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+
+%global _find_debuginfo_opts -g
+
+#%%define add_arm_libs %( if [ -d '%{_packagedir}/lib/arm' ]; then echo "1" ; else echo "0"; fi )
+#%%define is_arm  %( if [[ '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+#%%define not_arm  %( if [[ ! '__buildarch__' =~ "arm" ]]; then echo "1" ; else echo "0"; fi )
+
+#
+# Binary RPM specified attributed (lib and bin)
+#
+Name: %{_packagename}
+Summary: %{_summary}
+Version: %{_version}
+Release: %{_release}
+Packager: %{_author}
+# BuildArch: %{_buildarch}
+# Arch: %{_buildarch}
+License: Apache 2.0
+Group: Libraries/Math
+URL: %{_url}
+# Source: https://github.com/jsturdy/reedmuller-c/tags/v%{_version}/%{_packagename}-%{_version}-%{_release}.tbz2
+BuildRoot: %{_tmppath}/%{_packagename}-%{_version}-%{_release}-buildroot
+Prefix: %{_prefix}
+
+%if 0%{?_requires}
+Requires: __requires__
+%endif
+
+%if 0%{?_build_requires}
+BuildRequires: __build_requires__
+%endif
+
+%if %is_arm
+AutoReq: no
+%endif
+
+%description
+__description__
+
+%if %is_arm
+%package -n ctp7-%{_packagename}-libs
+Summary: Libraries for cross-compiling %{_packagename} dependent applications for CTP7
+Prefix: /opt/gem-peta-stage/ctp7/%{_prefix}
+Requires: gem-peta-stage-ctp7
+%if 0%{?_build_requires}
+BuildRequires: __build_requires__
+%endif
+BuildArch: noarch
+AutoReq: no
+
+%description -n ctp7-%{_packagename}-libs
+Provides the %{_packagename} libraries for the CTP7.
+These libraries are used when cross-compiling CTP7 applications.
+
+%endif
+
+## Only build devel and debuginfo RPMs for non-ARM
+%if %not_arm
+#
+# Devel RPM specified attributes (extension to binary rpm with include files)
+#
+%package -n %{_packagename}-devel
+Summary:  Development package for %{_summary}
+Requires: %{_packagename}
+
+%description -n %{_packagename}-devel
+__description__
+
+%endif
+
+#
+# Debuginfo RPM specified attributes (extension to binary rpm with include files)
+#
+%package -n %{_packagename}-debuginfo
+Summary:  Debuginfo package for %{_summary}
+Group:    Libraries/Math
+%if %is_arm
+AutoReq: no
+%endif
+Requires: %{_packagename}
+# BuildRequires: %{_packagename}
+
+%description -n %{_packagename}-debuginfo
+__description__
+
+%pre
+
+%prep
+#%%setup -q
+mv %{_sourcedir}/%{_project}-%{_longpackage}-%{_version}-%{_short_release}.tbz2 ./
+tar xjf %{_project}-%{_longpackage}-%{_version}-%{_short_release}.tbz2
+
+## update extracted timestamps if doing a git build
+find %{_project} -type f -iname '*.h' -print0 -exec touch {} \+
+find %{_project} -type f \( -iname '*.cpp' -o -iname '*.c' -o -iname '*.cxx' \) -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.d' -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.o' -print0 -exec touch {} \+
+find %{_project} -type f -iname '*.so*' -print0 -exec touch {} \+
+find %{_project} -type l -iname '*.so*' -print0 -exec touch -h {} \+
+
+%build
+pushd %{_project}
+TargetArch=%{_longpackage} make -j4
+popd
+
+#
+# Prepare the list of files that are the input to the binary and devel RPMs
+#
+%install
+rm -rf %{buildroot}
+pushd %{_project}
+echo TargetArch=%{_longpackage} INSTALL_PREFIX=%{buildroot} make install
+TargetArch=%{_longpackage} INSTALL_PREFIX=%{buildroot} make install
+touch ChangeLog README.md LICENSE MAINTAINER.md CHANGELOG.md
+popd
+
+%if %is_arm
+pushd %{_project}
+mkdir -p %{buildroot}/opt/
+cp -rfp --parents gem-peta-stage %{buildroot}/opt/
+popd
+%endif
+
+## Manually run find-debuginfo because...?
+## maybe only on x86_64?
+/usr/lib/rpm/find-debuginfo.sh -g -m -r --strict-build-id
+
+%clean
+#rm -rf %{buildroot}
+
+#
+# Files that go in the binary RPM for the x86_64 machine
+#
+%files
+%defattr(-,root,root,0755)
+%{_prefix}/lib/lib%{_packagename}.so*
+%{_prefix}/bin/rmencode
+%{_prefix}/bin/rmdecode
+
+%dir
+%attr(0755,root,root) %{_prefix}/bin
+
+%doc %{_project}/MAINTAINER.md
+%doc %{_project}/README.md
+%doc %{_project}/CHANGELOG.md
+%license %{_project}/LICENSE
+
+## Only build devel and debuginfo RPMs for non-ARM
+%if %not_arm
+#
+# Files that go in the devel RPM
+#
+%files -n %{_packagename}-devel
+%defattr(-,root,root,0755)
+
+%{_prefix}/include/*.h
+
+%dir
+%attr(0644,root,root) %{_prefix}/include
+
+%endif
+
+#
+# Files that go in the debuginfo RPM
+#
+%files -n %{_packagename}-debuginfo
+%defattr(-,root,root,0755)
+
+%dir
+/usr/lib/debug
+/usr/src/debug
+
+%post
+
+%preun
+
+%postun
+
+%changelog
