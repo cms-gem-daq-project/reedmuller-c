@@ -31,6 +31,7 @@ CXXFLAGS:=-std=c++11
 ADDFLAGS=-std=c++11 -std=gnu++11 -m64
 #INSTALL_PATH=/opt/reedmuller
 else
+TARGET_BOARD?=ctp7
 include $(ConfigDir)/mfZynq.mk
 #INSTALL_PATH=/mnt/persistent/gemdaq
 CXXFLAGS:=-std=c++14
@@ -166,8 +167,6 @@ $(PackageExecDir)/%: $(PackageSourceDir)/%.c $(LIBS)
 
 ifeq ($(Arch),x86_64)
 else
-TARGET_BOARD?=ctp7
-
 install: crosslibinstall
 
 uninstall: crosslibuninstall
