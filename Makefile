@@ -25,7 +25,7 @@ ProjectPath := $(shell pwd)
 export ProjectPath
 
 .PHONY: all build default install uninstall rpm release
-.PHONY: clean cleanrpm cleandoc cleanallrpm cleanall
+.PHONY: clean cleanrpm cleanallrpm cleanall
 
 default: all
 
@@ -83,11 +83,12 @@ $(TARGETS.RELEASE):
 
 #python:
 
-doc: 
-	@echo "TO DO"
+.PHONY: doc cleandoc
+doc:
+	$(MAKE) -C $@ docs
 
-cleandoc: 
-	@echo "TO DO"
+cleandoc:
+	$(MAKE) -C doc cleanall
 
 x86_64:
 
