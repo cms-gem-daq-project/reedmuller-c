@@ -59,31 +59,34 @@ extensions = [
 
 if os.getenv("USE_DOXYREST"):
     extensions += ["doxyrest", "cpplexer"]
-else:
-    extensions += ["breathe", "exhale"]
-    breathe_projects = {
-        "reedmuller": "../exhalebuild/xml/",
-    }
-    breathe_default_project = "reedmuller"
 
-    # Setup the exhale extension
-    exhale_args = {
-        # These arguments are required
-        "containmentFolder": "./api",
-        "rootFileName": "library_root.rst",
-        "rootFileTitle": "Reed--Muller library API",
-        "doxygenStripFromPath": "..",
-        # Suggested optional arguments
-        "createTreeView": True,
-        # TIP: if using the sphinx-bootstrap-theme, you need
-        # "treeViewIsBootstrap": True,
-        "exhaleExecutesDoxygen": True,
-        "exhaleDoxygenStdin": """
+extensions += ["breathe", "exhale"]
+breathe_projects = {
+    "reedmuller": "../exhalebuild/xml/",
+}
+breathe_default_project = "reedmuller"
+
+# Setup the exhale extension
+exhale_args = {
+    # These arguments are required
+    "containmentFolder": "./exhale-api",
+    "rootFileName": "api.rst",
+    "rootFileTitle": "Reed--Muller library API",
+    "doxygenStripFromPath": "{}".format(os.path.abspath("../../")),
+    # Suggested optional arguments
+    "createTreeView": True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+    "exhaleExecutesDoxygen": True,
+    "exhaleDoxygenStdin": """
 PROJECT_NAME = Reed-Muller
+PROJECT_NUMBER = {}
 INPUT = ../../include
 PREDEFINED+= DOXYGEN_IGNORE_THIS
-""",
-    }
+""".format(
+        release
+    ),
+}
 
 # Tell sphinx what the primary language being documented is.
 primary_domain = "cpp"
@@ -160,7 +163,7 @@ html_static_path = ["_static"]
 # or fully qualified paths (eg. https://...)
 html_css_files = [
     # "{}/css/rtd-custom.css".format(os.getenv("GEM_DOCS_URL")),
-    "css/custom.css",
+    # "css/custom.css",
 ]
 
 # Custom JavaScript

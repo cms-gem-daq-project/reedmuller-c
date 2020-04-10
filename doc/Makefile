@@ -6,44 +6,97 @@
 SPHINXOPTS?=
 SPHINXBUILD?=sphinx-build
 SOURCEDIR=source
+SPHINXAPIDIR=autoapi
 BUILDDIR=build
-DOXYREST_PREFIX?=$(CONDA_PREFIX)
 
-.EXPORT_ALL_VARIABLES:
+export EOS_SITE_NAME?=test-gemdaq-ci
+export EOS_SITE_PATH?=/tmp/$(USER)/$(EOS_SITE_NAME)
+export EOS_SITE_URL?=https://$(EOS_SITE_NAME).web.cern.ch/$(EOS_SITE_NAME)
+export GEM_DOCS_URL?=$(EOS_SITE_URL)
+
+ENV_NAME?=docs
+CONDA_ENV_FILE?=/etc/profile.d/conda.sh
+CONDA_DIR=/tmp/$(USER)/conda
+CONDA_RUN=conda run -n $(ENV_NAME)
+ifdef USE_CONDA
+CONDA_EXE=. $(CONDA_ENV_FILE) && $(CONDA_RUN)
+export DOXYREST_PREFIX?=$(CONDA_DIR)/$(ENV_NAME)
+else
+$(warning "Please ensure that the envronment from which make has been called is configured with the proper packages, as specified in the requirements.txt file")
+CONDA_EXE=
+export DOXYREST_PREFIX?=$(CONDA_PREFIX)
+endif
+CONDA_PY_VER?=2.7
+export DOXYREST_PREFIX?=$(CONDA_DIR)/$(ENV_NAME)
 
 .PHONY: help Makefile
+
 # Put it first so that "make" without argument is like "make help".
+ifdef USE_CONDA
+help: | condasetup.env
+endif
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(CONDA_EXE) $(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 .PHONY: docs
+ifdef USE_DOXYREST
+docs: doxyrest
+else
+docs: doxygen
+endif
 docs: html
+
+condasetup.env:
+	. $(CONDA_ENV_FILE) && \
+	conda config --append envs_dirs $(CONDA_DIR) && \
+	conda create -p $(CONDA_DIR)/$(ENV_NAME) python=$(CONDA_PY_VER) -y && \
+	$(CONDA_RUN) python -m pip install -r requirements.txt && \
+	$(CONDA_RUN) conda install -y doxyrest && \
+	touch $@
 
 .PHONY: doxygen doxyrest
 doxygen:
+	cp reedmuller.cfg.in reedmuller.cfg
+	perl -pi -e "s|__GIT_VERSION__|$(GIT_VERSION)|g" reedmuller.cfg
 	doxygen reedmuller.cfg
 
+ifdef USE_CONDA
+doxyrest: doxygen | condasetup.env
+else
 doxyrest: doxygen
-	doxyrest -c doxyrest-config.lua
+endif
+doxyrest:
+	cp doxyrest-config.lua.in doxyrest-config.lua
+	perl -pi -e "s|__DOXYREST_PREFIX__|$(DOXYREST_PREFIX)|g" doxyrest-config.lua
+	$(CONDA_EXE) doxyrest -c doxyrest-config.lua
 
-.PHONY: cleandoxygen cleandoxyrest cleanexhale
+.PHONY: cleanconda cleandoxygen cleandoxyrest cleanexhale
+cleanconda:
+	rm -rf $(CONDA_DIR)/$(ENV_NAME)
+	rm -rf condasetup.env
+
 cleandoxygen:
 	rm -rf doxybuild
 
 cleandoxyrest:
-	rm -rf source/doxyrest-api
+	rm -rf $(SOURCEDIR)/doxyrest-api
 
 cleanexhale:
 	rm -rf exhalebuild
-	rm -rf source/exhale-api
+	rm -rf $(SOURCEDIR)/exhale-api
 
 .PHONY: clean cleanall
 clean:
-	rm -rf build
+	rm -rf $(BUILDDIR)
 
 cleanall: clean cleandoxygen cleandoxyrest cleanexhale
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+ifdef USE_CONDA
+%: Makefile | condasetup.env
+else
 %: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+endif
+%:
+	@$(CONDA_EXE) $(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

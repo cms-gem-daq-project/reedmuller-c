@@ -1,3 +1,6 @@
+# Ignore everything
+*
+
 # Don't ignore 
 !requirements*.txt
 
@@ -7,10 +10,14 @@
 # Don't ignore documentation sources
 !*.rst
 
+# Don't ignore source files
+!source
+
 # Ignore auto-generated files
 source/doxyrest-api/*
 source/exhale-api/*
 source/sphinx-api/*
+source/autoapi/*
 
 # Don't ignore configuration files
 !source/conf.py
