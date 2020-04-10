@@ -1,7 +1,7 @@
 # Ignore everything
 *
 
-# Don't ignore 
+# Don't ignore requirements files
 !requirements*.txt
 
 # Don't ignore build configuration files
@@ -10,7 +10,7 @@
 # Don't ignore documentation sources
 !*.rst
 
-# Don't ignore source files
+# Don't ignore source tree
 !source
 
 # Ignore auto-generated files
