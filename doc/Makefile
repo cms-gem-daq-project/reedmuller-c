@@ -42,6 +42,15 @@ docs: doxygen
 endif
 docs: html
 
+.PHONY: deploy
+deploy: docs
+	find $(BUILD_DIR)/html -type f -iname '*.html' -print0 -exec \
+		perl -pi -e "s|SITE_ROOT|$(EOS_SITE_NAME)|g" {} \+
+	find $(BUILD_DIR)/html -type f -iname '*.html' -print0 -exec \
+		perl -pi -e "s|http://0.0.0.0:8000/|/|g" {} \+
+	find $(BUILD_DIR)/html -type f -iname '*.html' -print0 -exec \
+		perl -pi -e "s|http://0.0.0.0:8000|/|g" {} \+
+
 condasetup.$(ENV_NAME).env:
 	. $(CONDA_ENV_FILE) && \
 	conda config --append envs_dirs $(CONDA_DIR) && \
@@ -91,6 +100,8 @@ cleanall: clean cleandoxygen cleandoxyrest cleanexhale
 
 ifdef USE_CONDA
 doxyrest help html: | condasetup.$(ENV_NAME).env
-## this is not what I want, it forces condasetup to run even in no-op mode, but it solves the other problem...
+## this doesn't work
+#%: condasetup.$(ENV_NAME).env
+## this forces condasetup to run even in no-op mode, but it solves the other problem...
 #Makefile: | condasetup.$(ENV_NAME).env
 endif
