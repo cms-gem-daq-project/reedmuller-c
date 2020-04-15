@@ -1,8 +1,8 @@
 INDEX_TITLE="Reed--Muller C library API documentation"
 OUTPUT_FILE="source/doxyrest-api/api.rst"
 INPUT_FILE="doxybuild/xml/index.xml"
-FRAME_DIR_LIST = {"${DOXYREST_PREFIX}/share/doxyrest/frame/common",
-                  "${DOXYREST_PREFIX}/share/doxyrest/frame/cfamily",
+FRAME_DIR_LIST = {"__DOXYREST_PREFIX__/share/doxyrest/frame/common",
+                  "__DOXYREST_PREFIX__/share/doxyrest/frame/cfamily",
                   "frame"
 }
 FRAME_FILE="index.rst.in"
