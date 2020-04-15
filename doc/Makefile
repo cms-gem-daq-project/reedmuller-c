@@ -27,14 +27,10 @@ CONDA_EXE=
 export DOXYREST_PREFIX?=$(CONDA_PREFIX)
 endif
 CONDA_PY_VER?=2.7
-export DOXYREST_PREFIX?=$(CONDA_DIR)/$(ENV_NAME)
 
 .PHONY: help Makefile
 
 # Put it first so that "make" without argument is like "make help".
-ifdef USE_CONDA
-help: | condasetup.env
-endif
 help:
 	@$(CONDA_EXE) $(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
@@ -46,7 +42,7 @@ docs: doxygen
 endif
 docs: html
 
-condasetup.env:
+condasetup.$(ENV_NAME).env:
 	. $(CONDA_ENV_FILE) && \
 	conda config --append envs_dirs $(CONDA_DIR) && \
 	conda create -p $(CONDA_DIR)/$(ENV_NAME) python=$(CONDA_PY_VER) -y && \
@@ -60,11 +56,7 @@ doxygen:
 	perl -pi -e "s|__GIT_VERSION__|$(GIT_VERSION)|g" reedmuller.cfg
 	doxygen reedmuller.cfg
 
-ifdef USE_CONDA
-doxyrest: doxygen | condasetup.env
-else
 doxyrest: doxygen
-endif
 doxyrest:
 	cp doxyrest-config.lua.in doxyrest-config.lua
 	perl -pi -e "s|__DOXYREST_PREFIX__|$(DOXYREST_PREFIX)|g" doxyrest-config.lua
@@ -73,7 +65,7 @@ doxyrest:
 .PHONY: cleanconda cleandoxygen cleandoxyrest cleanexhale
 cleanconda:
 	rm -rf $(CONDA_DIR)/$(ENV_NAME)
-	rm -rf condasetup.env
+	rm -rf condasetup.$(ENV_NAME).env
 
 cleandoxygen:
 	rm -rf doxybuild
@@ -93,10 +85,12 @@ cleanall: clean cleandoxygen cleandoxyrest cleanexhale
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-ifdef USE_CONDA
-%: Makefile | condasetup.env
-else
 %: Makefile
-endif
 %:
 	@$(CONDA_EXE) $(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+ifdef USE_CONDA
+doxyrest help html: | condasetup.$(ENV_NAME).env
+## this is not what I want, it forces condasetup to run even in no-op mode, but it solves the other problem...
+#Makefile: | condasetup.$(ENV_NAME).env
+endif
